@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="11"/>
+    <BuildModes Active="Default"/>
+    <Units Count="7">
+      <Unit0>
+        <Filename Value="XDPW.pas"/>
+        <IsPartOfProject Value="True"/>
+        <CursorPos X="33" Y="116"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="Common.pas"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="10"/>
+        <CursorPos X="36" Y="14"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="Scanner.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="182"/>
+        <CursorPos X="14" Y="194"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="Parser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="CodeGen.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="Linker.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\inc\systemh.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="428"/>
+        <CursorPos X="3" Y="439"/>
+        <UsageCount Value="10"/>
+      </Unit6>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="216" Column="6" TopLine="203"/>
+      </Position1>
+      <Position2>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="206" Column="9" TopLine="201"/>
+      </Position2>
+      <Position3>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="185" Column="21" TopLine="164"/>
+      </Position3>
+      <Position4>
+        <Filename Value="Common.pas"/>
+        <Caret Line="37" Column="25"/>
+      </Position4>
+      <Position5>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="238" Column="6" TopLine="225"/>
+      </Position5>
+      <Position6>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="312" Column="22" TopLine="295"/>
+      </Position6>
+      <Position7>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="197" Column="5" TopLine="181"/>
+      </Position7>
+      <Position8>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="177" Column="11" TopLine="161"/>
+      </Position8>
+      <Position9>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="95" TopLine="78"/>
+      </Position9>
+      <Position10>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="108" Column="5" TopLine="104"/>
+      </Position10>
+      <Position11>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="61" Column="48" TopLine="42"/>
+      </Position11>
+      <Position12>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="693" Column="21" TopLine="672"/>
+      </Position12>
+      <Position13>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="61" Column="48" TopLine="42"/>
+      </Position13>
+      <Position14>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="29" Column="10" TopLine="10"/>
+      </Position14>
+      <Position15>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="72" Column="44" TopLine="42"/>
+      </Position15>
+      <Position16>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="47" Column="5" TopLine="37"/>
+      </Position16>
+      <Position17>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="693" Column="20" TopLine="672"/>
+      </Position17>
+      <Position18>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="61" Column="79" TopLine="42"/>
+      </Position18>
+      <Position19>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="72" Column="81" TopLine="42"/>
+      </Position19>
+      <Position20>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="61" Column="79" TopLine="42"/>
+      </Position20>
+      <Position21>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="29" TopLine="16"/>
+      </Position21>
+      <Position22>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="98" TopLine="95"/>
+      </Position22>
+      <Position23>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="179" Column="48" TopLine="165"/>
+      </Position23>
+      <Position24>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="98" Column="3" TopLine="86"/>
+      </Position24>
+      <Position25>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="61" Column="44" TopLine="42"/>
+      </Position25>
+      <Position26>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="98" Column="3" TopLine="103"/>
+      </Position26>
+      <Position27>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="30" Column="32" TopLine="10"/>
+      </Position27>
+      <Position28>
+        <Filename Value="Scanner.pas"/>
+        <Caret Line="194" Column="21" TopLine="178"/>
+      </Position28>
+      <Position29>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="63" TopLine="42"/>
+      </Position29>
+      <Position30>
+        <Filename Value="XDPW.pas"/>
+        <Caret Line="106" Column="39" TopLine="87"/>
+      </Position30>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>
