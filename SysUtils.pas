@@ -1,8 +1,12 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
 
+// VERSION 0.14.1
+
+// Similar to Delphi / free pascal Sysutils unit, with
+// items routinely used by user programs (and sometimes by the compiler)
 
 unit SysUtils;
 
@@ -40,6 +44,9 @@ function StrToFloat(const s: string): Real;
 function StrToPWideChar(const s: string): PWideChar;
 function PWideCharToStr(p: PWideChar): string; 
 procedure GetLocalTime(var SystemTime: TSYSTEMTIME); external 'kernel32.dll'; // name 'GetLocalTime';
+//function FindFirstFileExA(lpfilename : LPCStr;fInfoLevelId:FINDEX_INFO_LEVELS ;lpFindFileData:pointer;
+//         fSearchOp : FINDEX_SEARCH_OPS;lpSearchFilter:pointer;dwAdditionalFlags:dword):Handle; stdcall;
+//         external 'kernel32' // name 'FindFirstFileExA';
 
 
 implementation

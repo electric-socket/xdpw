@@ -1,8 +1,12 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
 
+// VERSION 0.14.1
+
+// general system variables and routines. Is automatically
+// precompiled into every program XDPW produces.
 
 unit System;
 
