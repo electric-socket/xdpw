@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE>Current Revisions to XD Pascal for Windows</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice 4.1.7  (Win32)">
+	<META NAME="AUTHOR" CONTENT="Paul Robunson">
+	<META NAME="CREATED" CONTENT="20201104;6110827">
+	<META NAME="CHANGEDBY" CONTENT="Paul Robunson">
+	<META NAME="CHANGED" CONTENT="20201104;8393334">
+	<META NAME="Info 3" CONTENT="">
+	<META NAME="Info 4" CONTENT="">
+	<META NAME="CHANGEDBY" CONTENT="Paul Robunson">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { margin: 0.79in }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<TABLE WIDTH=100% BORDER=1 CELLPADDING=4 CELLSPACING=3 STYLE="page-break-before: auto; page-break-after: auto">
+	<COL WIDTH=140*>
+	<COL WIDTH=116*>
+	<TR VALIGN=TOP>
+		<TD WIDTH=55% HEIGHT=298>
+			<P STYLE="margin-left: 0.13in; margin-right: 2.48in"><FONT SIZE=7 STYLE="font-size: 150pt">XDPW</FONT></P>
+		</TD>
+		<TD WIDTH=45%>
+			<P STYLE="margin-left: 0.96in; margin-right: 0.04in"><FONT SIZE=7 STYLE="font-size: 54pt">XD
+			Pascal for Windows:</FONT></P>
+			<P STYLE="margin-left: 0.96in; margin-right: 0.04in"><FONT SIZE=7 STYLE="font-size: 54pt">A
+			32-bit compiler</FONT></P>
+		</TD>
+	</TR>
+	<TR>
+		<TD COLSPAN=2 WIDTH=100% VALIGN=TOP>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">New feature for version
+			0.14.0</FONT></P>
+			<UL>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Error position: When
+				there is an error, the compiler will report Line number and
+				Column in the file, not just line number</FONT></P>
+			</UL>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">New features for version
+			0.14.1</FONT></P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">More statistics:</FONT></P>
+			<UL>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">For each unit, the
+				number of lines compiled for that unit is reported</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Total number of lines
+				compiled is reported</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Total number of
+				identifiers (Procedure, Function, Const, and Var) used</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Highest number of
+				identifiers used</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Total compilation
+				time and total lines compiled per second</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Date and time
+				compilation began and ended reported</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Memory usage for code
+				and data reported in decimal and hex</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Character misuse is
+				flagged: Close brace } used without a preceding { will warn a
+				person of an incorrect comment; using double quote &ldquo; is
+				flagged, warning that only ' is allowed</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">When an illgal
+				character is discovered, its position and character value are
+				reported</FONT></P>
+			</UL>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">I see XDPW as a teaching
+			(&ldquo;pedagogical&rdquo;) and convenience tool, for either doing
+			quick compiles either where using a monolithic, large compiler
+			won't do, or for those looking for an easy, approachable tool for
+			learning to program. I have plans for the future of XDPW (in no
+			particular order) including:</FONT></P>
+			<UL>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Change compiler
+				internals to use a linked list for identifiers instead of an
+				array. This will (vastly) increase the size of a program XDPW can
+				compile. It will also demonstrate how to work with linked lists </FONT>
+				</P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Support (* *)
+				comments</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Add the NAME
+				qualifier for external routines that might be in characters not
+				legal for use as Pascal identifiers</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Allow insertion of
+				assembly instructions in procedures or blocks</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">More compiler
+				directives including support for listing and cross-reference of
+				variables</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">When warning about
+				unused variables, it reports where they were declared, rather
+				than listing them as being at the end of the main program</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Start putting in
+				&ldquo;hooks&rdquo; to support 64-bit compiling</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Add support for
+				64-bit integers and 64-bit arithmetic as well as automatic type
+				conversion between byte, word and integer values to and from
+				64-bit values</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Add the placing of
+				file parameters on the PROGRAM statement, so files can be
+				declared </FONT>
+				</P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Add compile-time
+				conditional compilation</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Optionally generate
+				assembly language files instead of direct executable programs, or
+				allow for creating dynamic load libraries (DLLs) </FONT>
+				</P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Add an &ldquo;absolute&rdquo;
+				qualifier for variables accessing internal addresses directly.
+				This is important for certain system programs or hardware access
+				applications </FONT>
+				</P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Insert support for
+				&ldquo;C-style&rdquo; assignment operators: +=, -=, *=, and /= </FONT>
+				</P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">A rudimentary text
+				editor for quick source code fixes</FONT></P>
+				<LI><P><FONT SIZE=7 STYLE="font-size: 32pt">Add the &amp; prefix
+				to allow an identifier to be the same as a reserved word</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Implement the
+				ability to &ldquo;compile to memory&rdquo; so a program can be
+				compiled and run inside the compiler similar to the original
+				Turbo Pascal compiler</FONT></P>
+				<LI><P> <FONT SIZE=7 STYLE="font-size: 32pt">Separating the code
+				generated from the compiler so it could be used to develop for
+				other machines or other operasting systems</FONT></P>
+			</UL>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">I don;t know how much of
+			this I can actually accomplih, but I have to set (reasonable)
+			goals.</FONT></P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">I do not expect XDPW to be
+			the &ldquo;ultimate&rdquo; go to tool for writing large
+			applications. GNU Pascal and especially Free Pascal do a
+			tremendoius job; in fact, I use the Lazarus editor (nominally used
+			for creating forms-based Free Pascal applications) for working on
+			XDPW. But sometimes Free Pascal is just too slow and bloated for
+			quick edit-compile cycles</FONT></P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">What XDPW does well is
+			quick development of small to medium sized programs or for
+			&ldquo;toolbox&rdquo; work: when you need a quick, simple program
+			to automate a task or to figure out how to do something. Or
+			specifically how to write a compiler. Compilers do a lot of
+			complex work analyzing files and records, and is something worth
+			exploring. XDPW is not a &ldquo;toy,&rdquo; you can use it to do
+			actual, real work, in a format that is much more accessable and
+			&ldquo;approachable&rdquo; than other monolithic compilers like
+			GNU Pascal, Delphi or Free Pascal. It's also very efficient. Code
+			generated by XDPW can be 90% smaller, programs developed by it can
+			use 1/10 the space of a similar text-mode application compiled by
+			a full-size compiler.</FONT></P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">I mean, the Free Pascal
+			compile is a world-class, full-service compiler capable of taking
+			on even extremely large programs. I happen to like it.  But I can
+			never understand what it is doing; the compiler source code alone
+			is over 250,000 lines! Plus hundreds to thousands more for each
+			specific CPU it targets. Add to that tens of thousands more lines
+			of code for the run-time libraries and it's too big for one person
+			to get their head around. At under 15,000 lines, XDPW is very
+			approachable for one person wanting to learn how a compiler works.</FONT></P>
+			<P><BR><BR>
+			</P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">Come learn with us! </FONT>
+			</P>
+			<P><FONT SIZE=7 STYLE="font-size: 32pt">Paul Robinson</FONT></P>
+			<P><BR>
+			</P>
+		</TD>
+	</TR>
+</TABLE>
+<P><BR><BR>
+</P>
+</BODY>
+</HTML>

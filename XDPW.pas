@@ -1,20 +1,31 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14;0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
 
+// VERSION 0.14.1
+
+// The Main program of the compiler.
+{$show tokens}
 {$APPTYPE CONSOLE}
 {$I-}
 {$H-}
 
 
 program XDPW;
+uses SysUtils , Common, Scanner, Parser, CodeGen, Linker, Listing ;
 
-
-uses SysUtils, Common, Scanner, Parser, CodeGen, Linker;
-
-
-
+ {(* function CreateProcessA(lpApplicationName: LPCSTR;
+         lpCommandLine: LPCSTR;
+         lpProcessAttributes,
+         lpThreadAttributes: PSecurityAttributes;
+         bInheritHandles: BOOL;
+         dwCreationFlags: DWORD;
+         lpEnvironment: Pointer;
+         lpCurrentDirectory: LPCSTR;
+         const lpStartupInfo: TStartupInfoA;
+         var lpProcessInformation: TProcessInformation): BOOL; external 'kernel32' // name 'CreateProcessA';
+         *) }
 
 procedure SplitPath(const Path: TString; var Folder, Name, Ext: TString);
 var
@@ -38,7 +49,7 @@ if DotPos > 0 then
   Name := Copy(Path, 1, DotPos - 1);
   Ext  := Copy(Path, DotPos, Length(Path) - DotPos + 1);
   end;
-
+  
 if SlashPos > 0 then
   begin
   Folder := Copy(Path, 1, SlashPos);
@@ -46,7 +57,6 @@ if SlashPos > 0 then
   end;  
 
 end;
-
 
 
 
@@ -164,22 +174,29 @@ NumFolders := 2;
 
 TotalLines := 0;
 CompileProgramOrUnit('system.pas');
-
+InitListing;
 CompileProgramOrUnit(PasName + PasExt);
 
 ExePath := PasFolder + PasName + '.exe';
 LinkAndWriteProgram(ExePath);
 GetLocalTime(EndTime);
 TotalData := InitializedGlobalDataSize + UninitializedGlobalDataSize;
-Notice('Complete. Total program length was '+
-       Plural(TotalLines,'lines,','line,')+' Code size: ' + Comma(GetCodeSize) + ' ($'+
-        Hex(GetCodeSize)+') bytes. Data size: ' + Comma(TotalData )+
-        ' ($'+Hex(TotalData) + ' bytes');
+
 TimeString := Days[EndTime.dayOfWeek]+' '+Months[EndTime.month]+
               ' '+IntToStr(EndTime.day)+', '+IntToStr(EndTime.year);
 TimeString := TimeString+' '+IntToStr(EndTime.Hour)+
                ':'+I2(EndTime.Minute)+':'+I2(endTime.Second);
 Notice('Compilation completed: '+TimeString);
+
+Notice('Code size: ' + Comma(GetCodeSize) + ' ($'+
+        Hex(GetCodeSize)+') bytes. Data size: ' + Comma(TotalData )+
+        ' ($'+Hex(TotalData) + ') bytes');
+
+Notice('Complete. Total program length was '+
+       Comma(TotalLines)+' lines.');
+Notice('Total number of identifies used '+
+        Comma(TotalIdent)+' of which at most '+
+        Comma(MaxIdentCount)+' were used at any one time.');
 
     H :=  EndTime.Hour;
     if StartTime.Hour < EndTime.Hour  then
@@ -209,6 +226,8 @@ Notice('Compilation completed: '+TimeString);
 
 // we won't bother with days,
 // nobody is going to compile something taking that long
+// (anything tht big, they'd use a full-service
+// monolithic compiler)
    TimeString := '';
    If H >0 then
       Timestring := Plural(H,'hours','hour')+' ';
@@ -216,15 +235,14 @@ Notice('Compilation completed: '+TimeString);
       Timestring := TimeString + Plural(M,'minutes','minute')+' ';
    if timestring <> '' then
       Timestring := Timestring +' and';
-   Timestring := TimeString + IntToStr(S)+'.' + IntToStr(MS)+' seconds. ';
-   TimeString := 'Compilation took '+TimeString;
+   Timestring := TimeString + IntToStr(S)+'.' + IntToStr(MS)+' seconds.';
+   Notice( 'Compilation took '+TimeString);
 
    S:= (H*3600 + M*60 + S);
    compcount := ( TotalLines / (S+MS/1000))+0.5;
    TotalLines := TRUNC(Compcount);
-
-    TimeString := TimeString+'Compilation rate was approx. '+Comma(Totallines)+' per second.';
-    Notice(TimeString);
+   Notice( 'Compilation rate was approx. '+
+         Comma(Totallines)+' lines per second.');
 
 repeat FinalizeScanner until not RestoreScanner;
 FinalizeCommon;

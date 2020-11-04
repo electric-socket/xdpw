@@ -1,8 +1,11 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
 
+// VERSION 0.14.1
+
+// Parses the source code to translate its functions
 
 {$I-}
 {$H-}
@@ -62,6 +65,9 @@ if (i > 0) and (Ident[i].UnitIndex = ParserState.UnitStatus.Index) and (Ident[i]
   Error('Duplicate identifier ' + IdentName);
 
 Inc(NumIdent);
+Totalident := Totalident+1;
+if numident > MaxIdentCount then
+   MaxIdentCount := numident ;
 if NumIdent > MAXIDENTS then
   Error('Maximum number of identifiers exceeded');
   
@@ -212,19 +218,12 @@ end; // DeclareType
 
 
 
-//  DeclareIdent(Name, Kind, Size, InCStack?, DataType,PassMethod,
-//               Ord Value, Real Value, StringValue, SetValue,
-//               PredefProc, ReceiverName,;ReceiverType);
-//  Kind:  (EMPTYIDENT, GOTOLABEL, CONSTANT, USERTYPE, VARIABLE, PROC, FUNC)
-//  Pass method: (EMPTYPASSING, VALPASSING, CONSTPASSING, VARPASSING)
 
 procedure DeclarePredefinedIdents;
 begin
 // Constants
-DeclareIdent('TRUE',  CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING,         1, 0.0, '', [], EMPTYPROC, '', 0);
-DeclareIdent('FALSE', CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING,         0, 0.0, '', [], EMPTYPROC, '', 0);
-DeclareIdent('MAXINT',CONSTANT, 0, FALSE, INTEGERTYPEINDEX, EMPTYPASSING, $7FFFFFFF, 0.0, '', [], EMPTYPROC, '', 0);
-
+DeclareIdent('TRUE',  CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING, 1, 0.0, '', [], EMPTYPROC, '', 0);
+DeclareIdent('FALSE', CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC, '', 0);
 
 // Types
 DeclareIdent('INTEGER',  USERTYPE, 0, FALSE, INTEGERTYPEINDEX,  EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC, '', 0);
@@ -4666,14 +4665,15 @@ end; // CompileUsesClause
 
 function CompileProgramOrUnit(const Name: TString): Integer;
 Var
-    SLoc: Longint;
-begin
-InitializeScanner(Name);
+    SLoc: Longint;     // Source Lines of Code
 
-Inc(NumUnits);
-if NumUnits > MAXUNITS then
-  Error('Maximum number of units exceeded');
-ParserState.UnitStatus.Index := NumUnits;
+begin
+ //   if showToken then EmitToken('(*)ST:CompileProgramOrUnit;');
+    InitializeScanner(Name);
+    Inc(NumUnits);
+    if NumUnits > MAXUNITS then
+        Error('Maximum number of units exceeded');
+    ParserState.UnitStatus.Index := NumUnits;
 
 NextTok;
 
@@ -4715,14 +4715,15 @@ Notice('Compiling ' + Name);
 NumBlocks := 1;  
 CompileBlock(0);
 
-CheckTok(PERIODTOK);
-SLoc := ScannerLine;
- Notice('  '+Plural(SLoc,'lines','line'));
- TotalLines := TotalLines+SLoc;
+    CheckTok(PERIODTOK);
+//        if showToken then EmitToken('(*)EF:CompileBlock;');
+    SLoc := ScannerLine;
+    Notice('  '+Plural(SLoc,'lines','line'));
+    TotalLines := TotalLines+SLoc;
 
-Result := ParserState.UnitStatus.Index;
-FinalizeScanner;
-end;// CompileProgram
+    Result := ParserState.UnitStatus.Index;
+    FinalizeScanner;
+end;// CompileProgramOUnit
 
 
 end.

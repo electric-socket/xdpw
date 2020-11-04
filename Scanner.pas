@@ -1,7 +1,11 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14;0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
+
+// VERSION 0.14.1
+
+// scans the source code
 
 {$I-}
 {$H-}
@@ -12,7 +16,7 @@ unit Scanner;
 interface
 
 
-uses Common,SysUtils;
+uses Common, Listing , SysUtils;
 
 
 var
@@ -35,35 +39,11 @@ function ScannerPos: Integer;
 
 implementation
 
-
-
-type
-  TBuffer = record    
-    Ptr: PCharacter;
-    Size, Pos: Integer;
-  end;  
-  
-
-  TScannerState = record
-    Token: TToken;
-    CommentFile,
-    FileName: TString;
-    CommentPoint,
-    CommentLine,
-    Position,
-    Line: Integer;
-    Buffer: TBuffer;
-    ch, ch2: TCharacter;
-    EndOfUnit: Boolean;    
-  end;
-
-
 const
   SCANNERSTACKSIZE = 10;
 
-
 var
-  ScannerState: TScannerState;
+
   ScannerStack: array [1..SCANNERSTACKSIZE] of TScannerState;
   ScannerStackTop: Integer = 0;
   
@@ -73,7 +53,6 @@ const
   HexDigits: set of TCharacter = ['0'..'9', 'A'..'F'];
   Spaces:    set of TCharacter = [#1..#31, ' '];
   AlphaNums: set of TCharacter = ['A'..'Z', 'a'..'z', '0'..'9', '_'];
-  
   
 
   
@@ -97,7 +76,7 @@ repeat
 until FolderIndex > NumFolders;
 
 if FolderIndex > NumFolders then
-  Error('Unable to open source file ' + Name);
+   Error('Unable to open source file ''' + Name+'''.');
   
 with ScannerState do
   begin
@@ -106,6 +85,7 @@ with ScannerState do
   Position := 0;
   CommentLine := 0;
   CommentPoint := 0;
+  inComment := False;
   
   with Buffer do
     begin
@@ -130,7 +110,8 @@ end;
 
 
 
-
+// Used by Unit "Parser" when a new unit is being compiled
+// Probably when a unit being compiled calls a untit not yet compiled
 function SaveScanner: Boolean;
 begin
 Result := FALSE;
@@ -188,6 +169,8 @@ procedure ReadChar(var ch: TCharacter);
 begin
 if ScannerState.ch = #10 then   // End of line found
   begin
+     EOLListing;
+     ShowTokenLine := False;
      Inc(ScannerState.Line);
      Scannerstate.Position  := 0;
   end;
@@ -197,6 +180,7 @@ with ScannerState.Buffer do
   if Pos < Size then
     begin
     ch := PCharacter(Integer(Ptr) + Pos)^;
+    WriteListing(Ch);
     Inc(Pos);
     Inc(ScannerState.Position);
     end
@@ -236,50 +220,17 @@ end;
 
 
 
-procedure ReadMultiLineComment(Oldschool: Boolean);
-
-    Procedure CommentEof; // eof in middle of a comment
-    begin // provide an alternative error message for "runaway" comment
-       with ScannerState do
-          begin
-            Notice(ScannerFileName + ' (' + IntToStr(ScannerLine) +
-                  ':' + IntToStr(ScannerPos)  + ') Error: End of file inside comment');
-            Notice('Attention: Your last comment began at ('+
-                              IntToStr(CommentLine)+':'+IntToStr(CommentPoint)+
-                              ') and it might be helpful to look there.');
-            repeat FinalizeScanner until not RestoreScanner;
-            FinalizeCommon;
-            Halt(1);
-          end
-     end;
-
+procedure ReadMultiLineComment;
 begin
-    with ScannerState do
-        if not oldschool then
-        begin
-           while (ch <> '}') and not EndOfUnit do
-              ReadChar(ch);
-           if EndofUnit then
-              CommentEof;
-         end
-         else     // older comment starting with (* must end with *)
-         repeat
-                readchar(ch);
-                if endofunit then CommentEof;
-                if ch='*' then // check for close of comment
-                 begin
-                   readchar(ch);
-                   if endofunit then CommentEof;
-                   if ch=')' then
-                        exit;        // it is closed
-                end
-           until EndOfUnit;
+with ScannerState do
+  while (ch <> '}') and not EndOfUnit do
+    ReadChar(ch);
 end;
 
 
 
 
-procedure ReadDirective(OldSchool:boolean);
+procedure ReadDirective;
 var
   Text: TString;
 begin
@@ -328,10 +279,9 @@ with ScannerState do
     end    
     
   else                                  // All other directives are ignored
-    ReadMultiLineComment(OldSchool);
+    ReadMultiLineComment;
   end;  
 end;
-
 
 
 // hexadecimal numbers
@@ -488,7 +438,7 @@ end;
 
 
 
-// red #nnn or #$nn char
+// read #nnn or #$nn char
 procedure ReadCharCode;
 begin
 with ScannerState do
@@ -596,44 +546,24 @@ with ScannerState do
   Token.Kind := EMPTYTOK;
 
   // Skip spaces, comments, directives
-  while (ch in Spaces) or (ch = '{') or
-        (ch = '/') or (ch='(')  do
+  while (ch in Spaces) or (ch = '{') or (ch = '/') do
     begin
-    if ch = '{' then   // handle mewer { comments }                                                   // Multi-line comment or directive
+    if ch = '{' then                                                      // Multi-line comment or directive
       begin
-      Commentpoint := Position ;  // for "runaway" comments
-      CommentLine := Line;
-      ReadChar(ch);
-      if ch = '$' then ReadDirective(FALSE) else ReadMultiLineComment(FALSE);
+      ReadUppercaseChar(ch);
+      if ch = '$' then ReadDirective else ReadMultiLineComment;
       end
     else if ch = '/' then
       begin
-      ReadChar(ch2);
+      ReadUppercaseChar(ch2);
       if ch2 = '/' then
         ReadSingleLineComment                                             // Double-line comment
       else
         begin
-        if not EndOfUnit then Dec(Buffer.Pos);  // put the character back                          // Discard ch2
-        Break;
-        end;
-      end
-    else if ch = '(' then // handle old-school (* comments *)
-      begin
-          ReadChar(ch2);
-          if ch2 = '*' then
-          begin
-              Commentpoint := Position -1;  // for "runaway" comments
-              CommentLine := Line;
-              ReadChar(ch);
-              if ch = '$' then ReadDirective(TRUE) else ReadMultiLineComment(TRUE);
-          end
-      else
-        begin
-        if not EndOfUnit then Dec(Buffer.Pos);  // return borrowed char                          // Discard ch2
+        if not EndOfUnit then Dec(Buffer.Pos);                            // Discard ch2     
         Break;
         end;
       end;
-
     ReadChar(ch);
     end;
 
@@ -707,9 +637,10 @@ with ScannerState do
       '@': Token.Kind := ADDRESSTOK;
       '[': Token.Kind := OBRACKETTOK;
       ']': Token.Kind := CBRACKETTOK;
+      '"': Error('Double quote not allowed; only single quotes may enclose quoted text');
       '}': Error('Closing comment } character found without opening {');
     else
-      Error('Unexpected character "'+ch+'" ($'+Hex(ord(ch))+') found or end of file');
+      Error('Unexpected character or end of file');
     end; // case
 
     ReadChar(ch);

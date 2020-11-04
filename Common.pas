@@ -1,8 +1,11 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson:  Saturday, October 31, 2020
 
+// VERSION 0.14.1
+
+// Common data and routines used by all modules
 
 {$I-}
 {$H-}
@@ -14,13 +17,15 @@ interface
 
 
 const
-  VERSION                   = '0.14.0';
-  
-  NUMKEYWORDS               = 43;          
+  VERSION                   = '0.14.1';
+// Note, if changing keywords to add new ones,
+// TTOKENKIND and KEYWORD must **BOTH** be
+// adjusted.
+  NUMKEYWORDS               = 43;
   MAXSTRLENGTH              = 255;
   MAXSETELEMENTS            = 256;
   MAXENUMELEMENTS           = 256;
-  MAXIDENTS                 = 2000;
+  MAXIDENTS                 = 3000;
   MAXTYPES                  = 2000;
   MAXUNITS                  = 100;
   MAXFOLDERS                = 10;
@@ -33,7 +38,6 @@ const
   MAXUNINITIALIZEDDATASIZE  = 1024 * 1024 * 1024;
   MAXSTACKSIZE              =   16 * 1024 * 1024;
 
-  HexString = '0123456789ABCDEF';
 
 
 
@@ -77,6 +81,9 @@ type
     CBRACKETTOK,
     DEREFERENCETOK,
 
+
+// Note if any of these are added (or removes, KEYWORD must be changed)
+// Pay special attention to the next one as ANDTOK is directly referenced
     // Keywords
     ANDTOK,
     ARRAYTOK,
@@ -139,14 +146,88 @@ type
     STRINGLITERALTOK: (StrAddress: Integer;
                        StrLength: Integer);
   end;
-  
-  TTypeKind = (EMPTYTYPE, ANYTYPE, INTEGERTYPE, SMALLINTTYPE, SHORTINTTYPE, WORDTYPE, BYTETYPE, CHARTYPE, BOOLEANTYPE, REALTYPE, SINGLETYPE,
-               POINTERTYPE, FILETYPE, ARRAYTYPE, RECORDTYPE, INTERFACETYPE, SETTYPE, ENUMERATEDTYPE, SUBRANGETYPE, 
-               PROCEDURALTYPE, METHODTYPE, FORWARDTYPE);  
+ // make sure function GetTypeSpelling is updated if you change this
+  TTypeKind = (EMPTYTYPE, ANYTYPE, INTEGERTYPE, SMALLINTTYPE, SHORTINTTYPE,
+               WORDTYPE, BYTETYPE, CHARTYPE, BOOLEANTYPE, REALTYPE, SINGLETYPE,
+               POINTERTYPE, FILETYPE, ARRAYTYPE, RECORDTYPE, INTERFACETYPE,
+               SETTYPE, ENUMERATEDTYPE, SUBRANGETYPE,
+               PROCEDURALTYPE, METHODTYPE, FORWARDTYPE);
+
+ TBuffer = record
+    Ptr: PCharacter;
+    Size, Pos: Integer;
+  end;
 
 
+  TScannerState = record
+    Token: TToken;
+    FileName: TString;
+    CommentPoint,
+    CommentLine,
+    Position,
+    Line: Integer;
+    Buffer: TBuffer;
+    ch, ch2: TCharacter;
+    inComment,           // we're inside a comment
+    EndOfUnit: Boolean;
+  end;
+
+HexArray = array[0..15] of char;
 
 const
+
+// Special note: IF any new keywords are
+// added or removed, TTOKENKIND **must** be changed
+// Also, function GetKeyword searches this using
+// a binary search, so the entries **must** be in
+// alphabetical order
+  Keyword: array [1..NUMKEYWORDS] of TString =
+      (
+      'AND',
+      'ARRAY',
+      'BEGIN',
+      'CASE',
+      'CONST',
+      'DIV',
+      'DO',
+      'DOWNTO',
+      'ELSE',
+      'END',
+      'FILE',
+      'FOR',
+      'FUNCTION',
+      'GOTO',
+      'IF',
+      'IMPLEMENTATION',
+      'IN',
+      'INTERFACE',
+      'LABEL',
+      'MOD',
+      'NIL',
+      'NOT',
+      'OF',
+      'OR',
+      'PACKED',
+      'PROCEDURE',
+      'PROGRAM',
+      'RECORD',
+      'REPEAT',
+      'SET',
+      'SHL',
+      'SHR',
+      'STRING',
+      'THEN',
+      'TO',
+      'TYPE',
+      'UNIT',
+      'UNTIL',
+      'USES',
+      'VAR',
+      'WHILE',
+      'WITH',
+      'XOR'
+      );
+
   // Predefined type indices
   ANYTYPEINDEX          = 1;      // Untyped parameter, or base type for untyped pointers and files
   INTEGERTYPEINDEX      = 2;
@@ -162,7 +243,7 @@ const
   FILETYPEINDEX         = 12;     // Untyped file, compatible with text files
   STRINGTYPEINDEX       = 13;     // String of maximum allowed length
 
-
+  HexString: HexArray = ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F');
 
 type  
   TByteSet = set of Byte;
@@ -241,9 +322,13 @@ type
     Param: PParams;
     ResultType: Integer;
     CallConv: TCallConv;
-  end;      
+  end;
+
+//  IdentP = ^TIdentifier;
 
   TIdentifier = record
+//    Prev,                    // used for future conversion of
+//    Next: IdentP;            // program to use pointers
     Kind: TIdentKind;
     Name: TString;
     DataType: Integer;
@@ -345,6 +430,8 @@ const
   
 
 var
+  ScannerState: TScannerState;
+
   Ident: array [1..MAXIDENTS] of TIdentifier;
   Types: array [1..MAXTYPES] of TType;
   InitializedGlobalData: array [0..MAXINITIALIZEDDATASIZE - 1] of Byte;
@@ -353,11 +440,36 @@ var
   BlockStack: array [1..MAXBLOCKNESTING] of TBlock;
   WithStack: array [1..MAXWITHNESTING] of TWithDesignator;
 
-  NumIdent, NumTypes, NumUnits, NumFolders, NumBlocks, BlockStackTop, ForLoopNesting, WithNesting,
-  InitializedGlobalDataSize, UninitializedGlobalDataSize: Integer;
-  
+  NumIdent: integer =0;
+  MaxIdentCount: integer =0;
+    TotalIdent: integer =0;
+  NumTypes, NumUnits, NumFolders,
+  NumBlocks, BlockStackTop, ForLoopNesting,
+  WithNesting, InitializedGlobalDataSize,
+  UninitializedGlobalDataSize: Integer;
   IsConsoleProgram: Boolean;
-  TotalLines: LongInt; // Total number of lines read/compiled
+
+
+// FOR PROGRAM LISTING AND COMPILER DEBUGGING
+ListProgram,
+CrossReference,
+Statistics: Boolean;
+ListingLine,
+ListingPage: Integer;
+ListingPageLine,
+ListingPos,
+ListingProcLevelOpen,
+ListingProcLevelClose,
+ListingBlockLevelOpen,
+ListingBlockLevelClose: Byte;
+
+  ShowToken: Boolean = TRUE;
+  ShowParse:  Boolean = FALSE;
+  ShowTokenLine: Boolean = FALSE;
+  ShowTokenFile: Boolean = False;
+
+  TotalLines: LongInt = 0; // Total number of lines read/compiled
+
 
 
 procedure InitializeCommon;
@@ -398,59 +510,12 @@ function GetMethodInsideWith(var RecPointer: Integer; var RecType: Integer; var 
 function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
 function Hex(N:Longint):string;
 Function Plural(N:LongInt; Plu:String; Sng: String):   string;
+Procedure EmitToken(Token:TString);
+Procedure EmitStop;
+
 
 
 implementation
-
-
-const
-  Keyword: array [1..NUMKEYWORDS] of TString = 
-    (
-    'AND',
-    'ARRAY',
-    'BEGIN',
-    'CASE',
-    'CONST',
-    'DIV',
-    'DO',
-    'DOWNTO',
-    'ELSE',
-    'END',
-    'FILE',
-    'FOR',
-    'FUNCTION',
-    'GOTO',
-    'IF',
-    'IMPLEMENTATION',
-    'IN',
-    'INTERFACE',
-    'LABEL',
-    'MOD',
-    'NIL',
-    'NOT',
-    'OF',
-    'OR',
-    'PACKED',
-    'PROCEDURE',
-    'PROGRAM',
-    'RECORD',
-    'REPEAT',
-    'SET',
-    'SHL',
-    'SHR',
-    'STRING',
-    'THEN',
-    'TO',
-    'TYPE',
-    'UNIT',
-    'UNTIL',
-    'USES',
-    'VAR',
-    'WHILE',
-    'WITH',
-    'XOR'
-    );
- 
 
 
 var
@@ -541,7 +606,7 @@ for i := 1 to DataType.NumFields do
 end; 
 
 
-
+// This is in common bcause it is used by both Scanner and Parser`
 
 function GetTokSpelling(TokKind: TTokenKind): TString;
 begin
@@ -571,7 +636,8 @@ case TokKind of
   DEREFERENCETOK:                    Result := '^';
   ANDTOK..XORTOK:                    Result := Keyword[Ord(TokKind) - Ord(ANDTOK) + 1];
   IDENTTOK:                          Result := 'identifier';
-  INTNUMBERTOK, REALNUMBERTOK:       Result := 'number';
+  INTNUMBERTOK:                      Result := 'integer';
+  REALNUMBERTOK:                     Result := 'real number';
   CHARLITERALTOK:                    Result := 'character literal';
   STRINGLITERALTOK:                  Result := 'string literal'
 else
@@ -581,7 +647,7 @@ end;
 
 
 
-
+// make sure Keyword is updated if you change this
 function GetTypeSpelling(DataType: Integer): TString;
 begin
 case Types[DataType].Kind of
@@ -1231,9 +1297,9 @@ end;
 
 function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
 var
-  RecPointer: Integer;
+  RecPointer: Integer; 
   RecType: Integer;
-  IsConst: Boolean;
+  IsConst: Boolean;        
 begin
 Result := (GetFieldInsideWith(RecPointer, RecType, IsConst, Name) <> 0) or (GetMethodInsideWith(RecPointer, RecType, IsConst, Name) <> 0);
 end;
@@ -1250,7 +1316,7 @@ VAR
       while(num>0)  DO
       begin
          rem := num mod 16;
-         S := HexString[rem+1]+S;
+         S := HexString[ rem ]+S;
          num := num DIV 16;
        end;
       Result := S;
@@ -1267,6 +1333,30 @@ Begin
      Else
         result := Result + Sng;
 End;
+
+Procedure EmitToken(Token:TString);
+begin
+   if not ShowTokenFile then
+   begin
+        writeln;
+        write(ScannerState. FileName,' tokens:');
+        ShowTokenFile := TRUE;
+   end;
+   if not ShowTokenLine then
+   begin
+      writeln;
+      write('    ',Scannerstate.Line,' T: ');
+      ShowTokenLine := TRUE;
+   end;
+   write(' ',Token,' ');
+end;
+
+   Procedure EmitStop;
+   begin
+       ShowToken := FALSE ;
+       ShowTokenLine := FALSE;
+       ShowTokenFile := FALSE;
+   end;
 
 
 end.
