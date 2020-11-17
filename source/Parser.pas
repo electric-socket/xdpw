@@ -1,6 +1,9 @@
 // XD Pascal - a 32-bit compiler for Windows
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
+// VERSION 0.14.0
+
+
 {$I-}
 {$H-}
 
@@ -209,12 +212,19 @@ end; // DeclareType
 
 
 
+//  DeclareIdent(Name, Kind, Size, InCStack?, DataType,PassMethod,
+//               Ord Value, Real Value, StringValue, SetValue,
+//               PredefProc, ReceiverName,;ReceiverType);
+//  Kind:  (EMPTYIDENT, GOTOLABEL, CONSTANT, USERTYPE, VARIABLE, PROC, FUNC)
+//  Pass method: (EMPTYPASSING, VALPASSING, CONSTPASSING, VARPASSING)
 
 procedure DeclarePredefinedIdents;
 begin
 // Constants
-DeclareIdent('TRUE',  CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING, 1, 0.0, '', [], EMPTYPROC, '', 0);
-DeclareIdent('FALSE', CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC, '', 0);
+DeclareIdent('TRUE',  CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING,         1, 0.0, '', [], EMPTYPROC, '', 0);
+DeclareIdent('FALSE', CONSTANT, 0, FALSE, BOOLEANTYPEINDEX, EMPTYPASSING,         0, 0.0, '', [], EMPTYPROC, '', 0);
+DeclareIdent('MAXINT',CONSTANT, 0, FALSE, INTEGERTYPEINDEX, EMPTYPASSING, $7FFFFFFF, 0.0, '', [], EMPTYPROC, '', 0);
+
 
 // Types
 DeclareIdent('INTEGER',  USERTYPE, 0, FALSE, INTEGERTYPEINDEX,  EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC, '', 0);
@@ -4654,7 +4664,9 @@ end; // CompileUsesClause
 
 
 
-function CompileProgramOrUnit(const Name: TString): Integer; 
+function CompileProgramOrUnit(const Name: TString): Integer;
+Var
+    SLoc: Longint;
 begin
 InitializeScanner(Name);
 
@@ -4704,6 +4716,9 @@ NumBlocks := 1;
 CompileBlock(0);
 
 CheckTok(PERIODTOK);
+SLoc := ScannerLine;
+ Notice('  '+Plural(SLoc,'lines','line'));
+ TotalLines := TotalLines+SLoc;
 
 Result := ParserState.UnitStatus.Index;
 FinalizeScanner;

@@ -1,6 +1,9 @@
 // XD Pascal - a 32-bit compiler for Windows
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
+// VERSION 0.14.0
+
+
 {$I-}
 {$H-}
 
@@ -11,7 +14,7 @@ interface
 
 
 const
-  VERSION                   = '0.12';
+  VERSION                   = '0.14.0';
   
   NUMKEYWORDS               = 43;          
   MAXSTRLENGTH              = 255;
@@ -28,7 +31,9 @@ const
 
   MAXINITIALIZEDDATASIZE    =    1 * 1024 * 1024;
   MAXUNINITIALIZEDDATASIZE  = 1024 * 1024 * 1024;
-  MAXSTACKSIZE              =   16 * 1024 * 1024;  
+  MAXSTACKSIZE              =   16 * 1024 * 1024;
+
+  HexString = '0123456789ABCDEF';
 
 
 
@@ -352,7 +357,7 @@ var
   InitializedGlobalDataSize, UninitializedGlobalDataSize: Integer;
   
   IsConsoleProgram: Boolean;
-  
+  TotalLines: LongInt; // Total number of lines read/compiled
 
 
 procedure InitializeCommon;
@@ -391,7 +396,8 @@ function GetMethodUnsafe(RecType: Integer; const MethodName: TString): Integer;
 function GetMethod(RecType: Integer; const MethodName: TString): Integer;
 function GetMethodInsideWith(var RecPointer: Integer; var RecType: Integer; var IsConst: Boolean; const MethodName: TString): Integer;
 function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
-
+function Hex(N:Longint):string;
+Function Plural(N:LongInt; Plu:String; Sng: String):   string;
 
 
 implementation
@@ -1225,13 +1231,42 @@ end;
 
 function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
 var
-  RecPointer: Integer; 
+  RecPointer: Integer;
   RecType: Integer;
-  IsConst: Boolean;        
+  IsConst: Boolean;
 begin
 Result := (GetFieldInsideWith(RecPointer, RecType, IsConst, Name) <> 0) or (GetMethodInsideWith(RecPointer, RecType, IsConst, Name) <> 0);
 end;
 
+Function hex( N:LongInt):string;
+VAR
+   S: String;
+   rem, Num:integer;
+ begin
+     S :='';
+     Num := N;
+     if num = 0 then
+        S := '0';
+      while(num>0)  DO
+      begin
+         rem := num mod 16;
+         S := HexString[rem+1]+S;
+         num := num DIV 16;
+       end;
+      Result := S;
+  end;
+
+Function Plural(N:LongInt; Plu:String; Sng: String):   string;
+Var
+   s:String;
+Begin
+    IStr(N,S);
+    Result := ' '+S+' ';
+    If n<>1 Then
+        result:= Result + Plu
+     Else
+        result := Result + Sng;
+End;
 
 
 end.
