@@ -1,6 +1,9 @@
 // XD Pascal - a 32-bit compiler for Windows
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 
+// VERSION 0.14.0
+
+
 unit SysUtils;
 
 
@@ -17,6 +20,17 @@ type
   PWideChar = ^WideChar;
   WideString = array [1..MaxStrLength + 1] of WideChar;
 
+  TSystemTime = record
+     Year,
+     Month,
+     DayOfWeek,
+     Day : word;
+     Hour,
+     Minute,
+     Second,
+     MilliSecond: word;
+  end ;
+
 
 function IntToStr(n: Integer): string;
 function StrToInt(const s: string): Integer;
@@ -25,7 +39,7 @@ function FloatToStrF(x: Real; Format: TFloatFormat; Precision, Digits: Integer):
 function StrToFloat(const s: string): Real; 
 function StrToPWideChar(const s: string): PWideChar;
 function PWideCharToStr(p: PWideChar): string; 
-
+procedure GetLocalTime(var SystemTime: TSYSTEMTIME); external 'kernel32.dll'; // name 'GetLocalTime';
 
 
 implementation
