@@ -1,9 +1,9 @@
 // XD Pascal for Windows (XPDW) - a 32-bit compiler
-// Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
+// Copyright 2020 Paul Robnson
 
 // Latest upgrade by Paul Robinson:  Friday, November 6, 2020
 
-// VERSION 0.14.2
+// VERSION 0.15 {.0}
 
 // Routines related to listing the source of the program
 
@@ -12,13 +12,12 @@ unit Listing;
 interface
 
 uses
-  Common,SysUtils;
+  Common, SysUtils;
 
 var
   StartTime,
   EndTime: TSystemTime;
   ListingFile: Text;
-
 
   Procedure EolListing;
   Procedure WriteListing(Ch:Char);

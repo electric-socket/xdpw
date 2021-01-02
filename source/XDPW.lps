@@ -4,415 +4,438 @@
     <PathDelim Value="\"/>
     <Version Value="11"/>
     <BuildModes Active="Default"/>
-    <Units Count="40">
+    <Units Count="59">
       <Unit0>
         <Filename Value="XDPW.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="8"/>
-        <TopLine Value="208"/>
-        <CursorPos X="2" Y="224"/>
-        <UsageCount Value="86"/>
+        <CursorPos X="57" Y="2"/>
+        <UsageCount Value="206"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="Common.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
-        <TopLine Value="1241"/>
-        <CursorPos X="68" Y="1244"/>
-        <UsageCount Value="86"/>
-        <Loaded Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="7"/>
+        <UsageCount Value="206"/>
+        <Bookmarks Count="1">
+          <Item0 Y="26" ID="4"/>
+        </Bookmarks>
       </Unit1>
       <Unit2>
         <Filename Value="Scanner.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="96"/>
-        <CursorPos X="46" Y="109"/>
-        <UsageCount Value="86"/>
-        <Loaded Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="5"/>
+        <UsageCount Value="206"/>
       </Unit2>
       <Unit3>
         <Filename Value="Parser.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
-        <TopLine Value="250"/>
-        <CursorPos X="14" Y="264"/>
-        <UsageCount Value="86"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="385"/>
+        <CursorPos X="13" Y="405"/>
+        <UsageCount Value="206"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="CodeGen.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="1578"/>
-        <CursorPos X="5" Y="1632"/>
-        <UsageCount Value="86"/>
-        <Loaded Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <CursorPos X="21" Y="7"/>
+        <UsageCount Value="206"/>
       </Unit4>
       <Unit5>
         <Filename Value="Linker.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <CursorPos Y="6"/>
-        <UsageCount Value="86"/>
-        <Loaded Value="True"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="206"/>
       </Unit5>
       <Unit6>
-        <Filename Value="..\units\time.pas"/>
+        <Filename Value="..\units\System.pas"/>
         <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="77"/>
+        <CursorPos X="5" Y="94"/>
+        <UsageCount Value="236"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\units\SysUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="7"/>
+        <UsageCount Value="200"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\units\debug.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="6"/>
+        <UsageCount Value="249"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="patch.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Patch"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="6"/>
+        <UsageCount Value="212"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="conditional.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Conditional"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="79"/>
+        <CursorPos X="26" Y="89"/>
+        <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="crttest.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="CRtTest"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="35" Y="5"/>
+        <UsageCount Value="201"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="exer01.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Exer01"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="13"/>
+        <CursorPos X="28" Y="16"/>
+        <UsageCount Value="208"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="err003.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="19" Y="6"/>
+        <UsageCount Value="201"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="upd.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="4"/>
+        <CursorPos X="22" Y="6"/>
+        <UsageCount Value="201"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="assembler.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Assembler"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="18" Y="6"/>
+        <UsageCount Value="231"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="exer07.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="231"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="compilertrace.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="CompilerTrace"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="6"/>
+        <UsageCount Value="419"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="Template_unit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Template_Unit"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="419"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="exer03.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="5"/>
+        <UsageCount Value="419"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="exer04.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="20"/>
+        <UsageCount Value="419"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="exer05.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="6"/>
+        <UsageCount Value="374"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="error.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="22" Y="6"/>
+        <UsageCount Value="301"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="exer08.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="6"/>
+        <UsageCount Value="301"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="exer09.txt"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="22"/>
+        <CursorPos X="43" Y="29"/>
+        <UsageCount Value="301"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="exer11.txt"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="8"/>
+        <UsageCount Value="239"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="bk1.bat"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="160"/>
+        <DefaultSyntaxHighlighter Value="Bat"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="b.inc"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="2"/>
+        <UsageCount Value="160"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="a.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="30" Y="13"/>
+        <UsageCount Value="160"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="testbed.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="19" Y="3"/>
+        <UsageCount Value="64"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="internals.pas"/>
+        <UnitName Value="Internals"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="10"/>
+        <CursorPos Y="26"/>
+        <UsageCount Value="170"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="mult64_with_32.cpp"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="4" Y="3"/>
+        <UsageCount Value="135"/>
+        <DefaultSyntaxHighlighter Value="C++"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="div64.c"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="196"/>
+        <CursorPos X="2" Y="230"/>
+        <UsageCount Value="135"/>
+        <DefaultSyntaxHighlighter Value="C++"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="Arbitrary_Precision.txt"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="135"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="64-bit_add_mult.c"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="31"/>
+        <CursorPos Y="65"/>
+        <UsageCount Value="135"/>
+        <DefaultSyntaxHighlighter Value="C++"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="..\pasmsgs.txt"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="114"/>
+        <CursorPos Y="148"/>
+        <UsageCount Value="135"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="commondata.pas"/>
+        <UnitName Value="CommonData"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="44" Y="8"/>
+        <UsageCount Value="47"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="debug.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="4" Y="9"/>
+        <UsageCount Value="2"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="..\units\time.pas"/>
         <UnitName Value="Time"/>
         <EditorIndex Value="-1"/>
         <CursorPos Y="6"/>
-        <UsageCount Value="50"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="x1.pas"/>
-        <UnitName Value="X1"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="3"/>
-        <UsageCount Value="22"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="messaging.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="5"/>
-        <CursorPos X="24" Y="29"/>
-        <UsageCount Value="22"/>
-      </Unit8>
-      <Unit9>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\inc\systemh.inc"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="40" Y="440"/>
-        <UsageCount Value="5"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="NEWXDPW.pas"/>
-        <UnitName Value="XDPW"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="58"/>
-        <CursorPos Y="3"/>
-        <UsageCount Value="5"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="..\units\System.pas"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="1298"/>
-        <CursorPos X="84" Y="1304"/>
-        <UsageCount Value="22"/>
-        <Loaded Value="True"/>
-      </Unit11>
-      <Unit12>
-        <Filename Value="..\units\SysUtils.pas"/>
-        <EditorIndex Value="5"/>
-        <TopLine Value="34"/>
-        <CursorPos X="18" Y="53"/>
-        <UsageCount Value="28"/>
-        <Loaded Value="True"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="CHGXDPW.pas"/>
-        <UnitName Value="XDPW"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="88"/>
-        <UsageCount Value="5"/>
-      </Unit13>
-      <Unit14>
-        <Filename Value="CHGScanner.pas"/>
-        <UnitName Value="Scanner"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="16"/>
-        <CursorPos Y="5"/>
-        <UsageCount Value="5"/>
-      </Unit14>
-      <Unit15>
-        <Filename Value="C:\Program Files\Hercules\Hercules 3.07 (64 Bit)\TK4\dasd\editor.pas"/>
-        <UnitName Value="EDIT"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="55"/>
-        <UsageCount Value="5"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="..\..\AAEC\compiler.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="6626"/>
-        <UsageCount Value="5"/>
-      </Unit16>
-      <Unit17>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\win\sysutils.pp"/>
-        <UnitName Value="SysUtils"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="762"/>
-        <CursorPos X="23" Y="783"/>
-        <UsageCount Value="6"/>
-      </Unit17>
-      <Unit18>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\datih.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="82"/>
-        <CursorPos Y="101"/>
-        <UsageCount Value="6"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\sysutilh.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="329"/>
-        <CursorPos X="15" Y="22"/>
-        <UsageCount Value="6"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\osutilsh.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="34"/>
-        <UsageCount Value="6"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\sysutils.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="79"/>
-        <CursorPos X="11" Y="108"/>
-        <UsageCount Value="6"/>
-      </Unit21>
-      <Unit22>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\syshelp.inc"/>
-        <EditorIndex Value="-1"/>
-        <UsageCount Value="6"/>
-      </Unit22>
-      <Unit23>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\win64\windows.pp"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="25"/>
-        <UsageCount Value="6"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\filutil.inc"/>
-        <EditorIndex Value="-1"/>
-        <UsageCount Value="6"/>
-      </Unit24>
-      <Unit25>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\inc\varerror.inc"/>
-        <EditorIndex Value="-1"/>
-        <UsageCount Value="6"/>
-      </Unit25>
-      <Unit26>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\objpas\sysutils\dati.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="241"/>
-        <CursorPos X="15" Y="270"/>
-        <UsageCount Value="6"/>
-      </Unit26>
-      <Unit27>
-        <Filename Value="C:\lazarus\fpc\3.2.0\source\rtl\win\wininc\redef.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="506"/>
-        <CursorPos X="40" Y="537"/>
-        <UsageCount Value="6"/>
-      </Unit27>
-      <Unit28>
-        <Filename Value="..\..\..\..\..\Hugo\Librarian\the_librarian.hug"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="153"/>
-        <UsageCount Value="7"/>
-        <DefaultSyntaxHighlighter Value="None"/>
-      </Unit28>
-      <Unit29>
-        <Filename Value="..\..\..\..\..\Hugo\Librarian\lbr_time.hug"/>
-        <EditorIndex Value="-1"/>
-        <UsageCount Value="7"/>
-        <DefaultSyntaxHighlighter Value="None"/>
-      </Unit29>
-      <Unit30>
-        <Filename Value="tt.pp"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="10"/>
-        <CursorPos X="8" Y="24"/>
-        <UsageCount Value="49"/>
-      </Unit30>
-      <Unit31>
-        <Filename Value="..\units\math.pp"/>
-        <UnitName Value="Math"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="37"/>
-        <UsageCount Value="21"/>
-        <Loaded Value="True"/>
-      </Unit31>
-      <Unit32>
-        <Filename Value="L:\system.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1140"/>
-        <CursorPos X="32" Y="1162"/>
-        <UsageCount Value="8"/>
-      </Unit32>
-      <Unit33>
-        <Filename Value="L:\systemh.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1196"/>
-        <CursorPos X="22" Y="1213"/>
-        <UsageCount Value="8"/>
-      </Unit33>
-      <Unit34>
-        <Filename Value="L:\rtl\win32\system.pp"/>
-        <UnitName Value="System"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="368"/>
-        <CursorPos X="35" Y="382"/>
-        <UsageCount Value="8"/>
-      </Unit34>
-      <Unit35>
-        <Filename Value="L:\rtl\inc\systemh.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1180"/>
-        <CursorPos X="17" Y="1211"/>
-        <UsageCount Value="8"/>
-      </Unit35>
-      <Unit36>
-        <Filename Value="L:\rtl\inc\system.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1131"/>
-        <CursorPos X="32" Y="1162"/>
-        <UsageCount Value="8"/>
-      </Unit36>
-      <Unit37>
-        <Filename Value="L:\rtl\win\syswin.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="658"/>
-        <CursorPos X="17" Y="689"/>
-        <UsageCount Value="8"/>
-      </Unit37>
-      <Unit38>
-        <Filename Value="L:\rtl\win32\seh32.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="20"/>
-        <CursorPos X="4" Y="39"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="72"/>
       </Unit38>
       <Unit39>
-        <Filename Value="..\..\..\..\..\Hugo\Librarian\lbr_time.hi"/>
+        <Filename Value="directives.pas"/>
+        <UnitName Value="Template_Unit"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="199"/>
-        <CursorPos X="10" Y="225"/>
-        <UsageCount Value="8"/>
-        <DefaultSyntaxHighlighter Value="None"/>
+        <CursorPos X="42" Y="6"/>
+        <UsageCount Value="163"/>
       </Unit39>
+      <Unit40>
+        <Filename Value="linklist.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="15" Y="35"/>
+        <UsageCount Value="119"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="listing.pas"/>
+        <UnitName Value="Listing"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="21" Y="6"/>
+        <UsageCount Value="98"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="numbertest.pas"/>
+        <UnitName Value="NumberTest"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="19" Y="11"/>
+        <UsageCount Value="141"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="..\pasmsgs.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="14"/>
+        <CursorPos X="43" Y="128"/>
+        <UsageCount Value="35"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="exer09.pas"/>
+        <UnitName Value="Exer09"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="166"/>
+        <CursorPos X="24" Y="9"/>
+        <UsageCount Value="146"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="exerunit.pas"/>
+        <UnitName Value="ExerUnit"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="24" Y="4"/>
+        <UsageCount Value="116"/>
+      </Unit45>
+      <Unit46>
+        <Filename Value="exer11.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="6" Y="12"/>
+        <UsageCount Value="116"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="..\..\..\..\..\Downloads\Delphi&amp;Pascal\stanford\paslibx.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1018"/>
+        <CursorPos X="19" Y="876"/>
+        <UsageCount Value="57"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="..\..\..\Antlr\grun.bat"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="50" Y="6"/>
+        <UsageCount Value="116"/>
+        <DefaultSyntaxHighlighter Value="Bat"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="..\c.bat"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="13" Y="10"/>
+        <UsageCount Value="54"/>
+        <DefaultSyntaxHighlighter Value="Bat"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="..\d.bat"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+        <DefaultSyntaxHighlighter Value="Bat"/>
+      </Unit50>
+      <Unit51>
+        <Filename Value="..\units\handler.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="16"/>
+        <CursorPos Y="37"/>
+        <UsageCount Value="6"/>
+      </Unit51>
+      <Unit52>
+        <Filename Value="..\..\Stanford-Pascal\pas1979.pas"/>
+        <UnitName Value="PASCALCOMPILER"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="73"/>
+        <UsageCount Value="6"/>
+      </Unit52>
+      <Unit53>
+        <Filename Value="S:\encod.pas"/>
+        <UnitName Value="ENCOD"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+      </Unit53>
+      <Unit54>
+        <Filename Value="S:\pascal.messages"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="31"/>
+        <UsageCount Value="6"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit54>
+      <Unit55>
+        <Filename Value="err001.pas"/>
+        <UnitName Value="Err001"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+      </Unit55>
+      <Unit56>
+        <Filename Value="err002.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+      </Unit56>
+      <Unit57>
+        <Filename Value="exer02.pas"/>
+        <UnitName Value="Exer02"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+      </Unit57>
+      <Unit58>
+        <Filename Value="exer06.pas"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="6"/>
+      </Unit58>
     </Units>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="1">
       <Position1>
-        <Filename Value="Common.pas"/>
-        <Caret Line="399" Column="15" TopLine="385"/>
+        <Filename Value="conditional.pas"/>
+        <Caret Line="89" Column="26" TopLine="79"/>
       </Position1>
-      <Position2>
-        <Filename Value="XDPW.pas"/>
-        <Caret Line="188" Column="10"/>
-      </Position2>
-      <Position3>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="102" Column="18" TopLine="92"/>
-      </Position3>
-      <Position4>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="66" Column="30" TopLine="54"/>
-      </Position4>
-      <Position5>
-        <Filename Value="Common.pas"/>
-        <Caret Line="360" Column="62" TopLine="355"/>
-      </Position5>
-      <Position6>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="225" Column="23" TopLine="214"/>
-      </Position6>
-      <Position7>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="192" Column="22" TopLine="181"/>
-      </Position7>
-      <Position8>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="194" Column="27" TopLine="181"/>
-      </Position8>
-      <Position9>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="55" Column="5" TopLine="44"/>
-      </Position9>
-      <Position10>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="632" Column="72" TopLine="614"/>
-      </Position10>
-      <Position11>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="247" Column="25" TopLine="243"/>
-      </Position11>
-      <Position12>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="67" Column="24" TopLine="56"/>
-      </Position12>
-      <Position13>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="53" Column="14" TopLine="36"/>
-      </Position13>
-      <Position14>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="94" Column="3" TopLine="84"/>
-      </Position14>
-      <Position15>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="80" Column="28" TopLine="64"/>
-      </Position15>
-      <Position16>
-        <Filename Value="Parser.pas"/>
-        <Caret Line="4714" Column="13" TopLine="4691"/>
-      </Position16>
-      <Position17>
-        <Filename Value="Common.pas"/>
-        <Caret Line="25" Column="3" TopLine="11"/>
-      </Position17>
-      <Position18>
-        <Filename Value="XDPW.pas"/>
-        <Caret Line="188" Column="10"/>
-      </Position18>
-      <Position19>
-        <Filename Value="Parser.pas"/>
-        <Caret Line="4719" Column="22" TopLine="4697"/>
-      </Position19>
-      <Position20>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="759" Column="23" TopLine="754"/>
-      </Position20>
-      <Position21>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="66" Column="30" TopLine="55"/>
-      </Position21>
-      <Position22>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="47" Column="3" TopLine="39"/>
-      </Position22>
-      <Position23>
-        <Filename Value="Scanner.pas"/>
-        <Caret Line="115" Column="24" TopLine="103"/>
-      </Position23>
-      <Position24>
-        <Filename Value="XDPW.pas"/>
-        <Caret Line="184" Column="11" TopLine="162"/>
-      </Position24>
-      <Position25>
-        <Filename Value="Parser.pas"/>
-        <Caret Line="4718" Column="12" TopLine="4697"/>
-      </Position25>
-      <Position26>
-        <Filename Value="..\units\System.pas"/>
-        <Caret Line="1304" Column="84" TopLine="1298"/>
-      </Position26>
-      <Position27>
-        <Filename Value="Parser.pas"/>
-        <Caret Line="4721" Column="12" TopLine="4700"/>
-      </Position27>
-      <Position28>
-        <Filename Value="XDPW.pas"/>
-        <Caret Line="173" Column="15" TopLine="162"/>
-      </Position28>
-      <Position29>
-        <Filename Value="XDPW.pas"/>
-        <Caret Line="222" Column="49" TopLine="212"/>
-      </Position29>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>

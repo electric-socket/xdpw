@@ -1,8 +1,12 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
+// Copyright 2020 Paul Robnson
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
 
+// VERSION 0.15    {.0}
+
+// Covert the stored code in memory into a windoes PE executable file
 
 {$I-}
 {$H-}
@@ -13,7 +17,7 @@ unit Linker;
 interface
 
 
-uses Common, CodeGen;
+uses  Common, Error, CodeGen;
 
 
 procedure InitializeLinker;
@@ -24,22 +28,70 @@ procedure LinkAndWriteProgram(const ExeName: TString);
 
 
 implementation
+type
+  TDOSStub = array [0..127] of Byte;
 
- 
 const
+  // This translates rougly to "This program cannot run in DOS Mode"
+  // Note: While some old programs "expect" this to be 128 bytes, it
+  // can be longer, which was intended to allow a developer to package
+  // both a DOS mode and Windows mode app in the same executable
+  // An EXE reader should use bytes 60-64 ($3C) to determine
+  // where the PE header should be
+  DOSStub: TDOSStub =
+    (
+    $4D, $5A,  // signature: array [1..2] of char =  Start of MSDOS "MZ" header; 64 bytes
+    $90, $00,  // lastsize: SHORT
+    $03, $00,  // nblocks : SHORT
+    $00, $00,  // nreloc  : SHORT
+    $04, $00,  // hdrsize : SHORT
+    $00, $00,  // minalloc: SHORT
+    $FF, $FF,  // maxalloc: SHORT
+    $00, $00,  // SS      : SHORT - Initial SS reg value
+    $B8, $00,  // SP      : SHORT - Initial Sp reg value
+    $00, $00,  // checksum: SHORT
+    $00, $00,  // IP      : SHORT - initial IP register value
+    $00, $00,  // CS      : SHORT - initial CS register value
+    $40, $00,  // relocpos: SHORT
+    $00, $00,  // noverlay: SHORT
+    $00, $00,  $00, $00,  $00, $00,
+    $00, $00,  // reserved1: ARRAY [1..4] OF SHORT
+    $00, $00,  // OEM_id  : SHORT
+    $00, $00,  // OEM_info: SHORT
+    $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00,
+    $00, $00, $00, $00, $00, $00,
+    $00, $00, // reserved2: ARRAY [1..10] OF SHORT
+    $80, $00, $00, $00, // PEheader_address LONG - in this case, byte 128
+                        // ;      actual MSDOS stub program
+    $0E,                //   push CS
+    $1F,                //   pop  DS
+    $BA, $0E, $00,      //   mov  DX,message
+    $B4, $09,           //   mov  AH,$09    - MSDOS write to terminal argument
+    $CD, $21,           //   int  $21       - Call MSDOS
+    $B8, $01, $4C,      //   mov  AX, $4C01 - MSDOS terminate program argument
+    $CD, $21,           //   int  $21       - Call MSDOS
+    $54, $68, $69, $73, $20,  //message db "This program cannot be run in DOS mode."
+    $70, $72, $6F, $67, $72, $61, $6D, $20, //program
+    $63, $61, $6E, $6E, $6F, $74, $20,      //cannot
+    $62, $65, $20,                          //be
+    $72, $75, $6E, $20,                     //run
+    $69, $6E, $20,                          //in
+    $44, $4F, $53, $20,                     //DOS
+    $6D, $6F, $64, $65, $2E,                //mode.
+    $0D, $0D, $0A, $24,  //        db 0x0d, 0x0d, 0x0a, '$'
+    $00, $00, $00, $00, $00, $00, $00       // filler to align to next segment
+    );                                      //PEheader - starts next
+
   IMGBASE           = $400000;
   SECTALIGN         = $1000;
   FILEALIGN         = $200;
   
   MAXIMPORTLIBS     = 100;
   MAXIMPORTS        = 2000;
-  
 
-    
-type
-  TDOSStub = array [0..127] of Byte;
- 
 
+  type
   TPEHeader = packed record
     PE: array [0..3] of TCharacter;
     Machine: Word;
@@ -148,28 +200,13 @@ type
   end;
 
 
-
 var
-  Headers: THeaders; 
+  Headers: THeaders;
   Import: array [1..MAXIMPORTS] of TImport;
   ImportSectionData: TImportSectionData;
   LastImportLibName: TString;
   ProgramEntryPoint: LongInt;
-  
-  
-  
-const
-  DOSStub: TDOSStub = 
-    (
-    $4D, $5A, $90, $00, $03, $00, $00, $00, $04, $00, $00, $00, $FF, $FF, $00, $00,
-    $B8, $00, $00, $00, $00, $00, $00, $00, $40, $00, $00, $00, $00, $00, $00, $00,
-    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $80, $00, $00, $00,
-    $0E, $1F, $BA, $0E, $00, $B4, $09, $CD, $21, $B8, $01, $4C, $CD, $21, $54, $68,
-    $69, $73, $20, $70, $72, $6F, $67, $72, $61, $6D, $20, $63, $61, $6E, $6E, $6F,
-    $74, $20, $62, $65, $20, $72, $75, $6E, $20, $69, $6E, $20, $44, $4F, $53, $20,
-    $6D, $6F, $64, $65, $2E, $0D, $0D, $0A, $24, $00, $00, $00, $00, $00, $00, $00
-    );
+
 
  
 
@@ -327,8 +364,11 @@ end;
 procedure SetProgramEntryPoint;
 begin
 if ProgramEntryPoint <> 0 then
-  Error('Duplicate program entry point');
-  
+  begin
+      Fatal('Duplicate program entry point');
+      Exit;
+  end;
+
 ProgramEntryPoint := GetCodeSize;
 end;
 
@@ -341,7 +381,10 @@ with ImportSectionData do
   begin  
   Inc(NumImports);
   if NumImports > MAXIMPORTS then
-    Error('Maximum number of import functions exceeded');
+    begin
+    Fatal('Maximum number of import functions exceeded');
+    Exit;
+    end;
 
   Import[NumImports].LibName := ImportLibName;
   Import[NumImports].FuncName := ImportFuncName;
@@ -350,7 +393,10 @@ with ImportSectionData do
     begin
     Inc(NumImportLibs);
     if NumImportLibs > MAXIMPORTLIBS then
-      Error('Maximum number of import libraries exceeded');
+      begin
+          Fatal('Maximum number of import libraries exceeded');
+          Exit;
+      end;
     LastImportLibName := ImportLibName;
     end;
     
@@ -398,8 +444,11 @@ with ImportSectionData do
     // Add new import function
     Inc(LookupIndex);
     if LookupIndex > MAXIMPORTS + MAXIMPORTLIBS then
-      Error('Maximum number of lookup entries exceeded');
-      
+      Begin
+          Fatal('Maximum number of lookup entries exceeded');
+          Exit;
+      end;
+
     LookupTable[LookupIndex] := NameTableOffset + SizeOf(NameTable[1]) * (ImportIndex - 1);                                              
 
     Move(Import[ImportIndex].FuncName[1], NameTable[ImportIndex].Name, Length(Import[ImportIndex].FuncName));
@@ -431,15 +480,15 @@ end;
 
 
 
-
+// Called by main program to write tthe code to disk-
 procedure LinkAndWriteProgram(const ExeName: TString);
 var
   OutFile: TOutFile;
   CodeSize, ImportSize, LookupTableOffset: Integer;
   
 begin
-if ProgramEntryPoint = 0 then 
-  Error('Program entry point not found');
+if ProgramEntryPoint = 0 then
+     Catastrophic('Program entry point not found');
 
 CodeSize := GetCodeSize;
 
@@ -453,13 +502,15 @@ Relocate(IMGBASE + Headers.CodeSectionHeader.VirtualAddress,
 
 FixupImportSection(Headers.ImportSectionHeader.VirtualAddress);
 
+if errorcount <>0 then exit; // Don't create file if errors
+
 // Write output file
 Assign(OutFile, TGenericString(ExeName));
 Rewrite(OutFile, 1);
 
 if IOResult <> 0 then
-  Error('Unable to open output file ' + ExeName);
-  
+     Catastrophic('Unable to open output file ' + ExeName);  {fatal}
+
 BlockWrite(OutFile, Headers, SizeOf(Headers));
 Pad(OutFile, SizeOf(Headers), FILEALIGN);
 

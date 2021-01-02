@@ -1,8 +1,14 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
+// Copyright 2020 Paul Robnson
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
 
+// VERSION 0.15 {.0}
+
+// Common data and routines used by all modules
+
+(*$Hide feelings*)
 
 {$I-}
 {$H-}
@@ -11,19 +17,74 @@ unit Common;
 
 
 interface
-
-
 const
-  VERSION                   = '0.14.0';
-  
-  NUMKEYWORDS               = 43;          
-  MAXSTRLENGTH              = 255;
-  MAXSETELEMENTS            = 256;
+// General, independent constants
+
+
+
+     // XDPW - for display
+
+       VERSION_MAJOR             = 0;
+       VERSION_RELEASE           = 15;
+       VERSION_PATCH             = 0;
+       VERSION_FULL              = VERSION_MAJOR*1000+
+                                   VERSION_RELEASE *10+
+                                   VERSION_PATCH;
+
+// note, the folowing MUST be a string of digits in quotes
+// as PROGRAM UPD does an auto-upddate on every compile
+// and it has to be passed as string to Notice.
+       VERSION_REV               = '255';
+       CODENAME                  = 'New Years Eve';
+       RELEASEDATE               = 'Thursday, December 31, 2020';
+
+
+       Months: array[1..12] of string[9]=
+            ('January','February','March',   'April',   'May','     June',
+             'July',    'August', 'September','October','November', 'Decenber');
+       Days: Array[0..6] of string[9]=
+             ('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday');
+
+       DigitZero = Ord('0');     // used to translate digits to numbers
+
+// Scanner
+    // Predefined type indices
+    // Note that STringTypeIndex MUST BE LAST in order to reserve space for predefined types
+
+    ANYTYPEINDEX          = 1;      // Untyped parameter, or base type for untyped pointers and files
+    INTEGERTYPEINDEX      = 2;
+    SMALLINTTYPEINDEX     = 3;
+    SHORTINTTYPEINDEX     = 4;
+    INT64TYPEINDEX        = 5;
+    INT128TYPEINDEX       = 6;
+    WORDTYPEINDEX         = 7;
+    BYTETYPEINDEX         = 8;
+    CHARTYPEINDEX         = 9;
+    BOOLEANTYPEINDEX      = 10;
+    REALTYPEINDEX         = 11;     // Basic real type: 64-bit double (all temporary real results are of this type)
+    CURRENCYTYPEINDEX     = 12;     // Currency: 31 digits, 27 before the decimal point, 4 after
+    SINGLETYPEINDEX       = 13;
+    POINTERTYPEINDEX      = 14;     // Untyped pointer, compatible with any other pointers
+    FILETYPEINDEX         = 15;     // Untyped file, compatible with text files
+    STRINGTYPEINDEX       = 16;     // String of maximum allowed length
+
+    ErrorMsgMax = 6; // max no. of inserted error messages
+
+  // Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
+  // TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
+  NUMKEYWORDS               = 44;    // ANDTOK .. XORTOK, 'AND' .. 'XOR'
   MAXENUMELEMENTS           = 256;
-  MAXIDENTS                 = 2000;
+// 2000 might have been too small for MAXIDENTS,
+// increasaing to 3000
+// Also, if we switch to pointers both of these 2 following items
+// may be eliminated
+  MAXIDENTS                 = 3000;
   MAXTYPES                  = 2000;
-  MAXUNITS                  = 100;
+// Units will remain an array; it's not so many
+// that moving to a linked list helps
+  MAXUNITS                  = 254;
   MAXFOLDERS                = 10;
+  MAXEXTENSIONS             = 10;
   MAXBLOCKNESTING           = 10;
   MAXPARAMS                 = 30;
   MAXFIELDS                 = 100;
@@ -32,147 +93,407 @@ const
   MAXINITIALIZEDDATASIZE    =    1 * 1024 * 1024;
   MAXUNINITIALIZEDDATASIZE  = 1024 * 1024 * 1024;
   MAXSTACKSIZE              =   16 * 1024 * 1024;
+  SCANNERSTACKSIZE          = 11;  // To allow for up to 10 units plus Include file
+  MAXTOKENS                 = 200;
 
-  HexString = '0123456789ABCDEF';
+  // Be aware function GetKeyword searches this using
+  // a binary search, so the entries **must** be in
+  // alphabetical order
+  //
+  // These have been moved from SCANNER and placed
+  // "Above the line" (above IMPLEMENTATON) so they
+  // can be seen by it, and are here so certain
+  // items here can see them.
+  // Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
+  // TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
+  // Also, to make comparisons shorter, these are defined as 20-character strings
+    Keyword: array [1..NUMKEYWORDS] of String[20] =
+        (
+        'AND',       // this ties to value of ANDTOK
+        'ARRAY',
+        'ASM',
+        'BEGIN',
+        'CASE',
+        'CONST',
+        'DIV',
+        'DO',
+        'DOWNTO',
+        'ELSE',      //  10
+        'END',
+        'FILE',
+        'FOR',
+        'FUNCTION',
+        'GOTO',
+        'IF',
+        'IMPLEMENTATION',
+        'IN',
+        'INTERFACE',
+        'LABEL',         // 20
+        'MOD',
+        'NIL',
+        'NOT',
+        'OF',
+        'OR',
+        'PACKED',
+        'PROCEDURE',
+        'PROGRAM',
+        'RECORD',
+        'REPEAT',           // 30
+        'SET',
+        'SHL',
+        'SHR',
+        'STRING',
+        'THEN',
+        'TO',
+        'TYPE',
+        'UNIT',
+        'UNTIL',
+        'USES',              // 40
+        'VAR',
+        'WHILE',
+        'WITH',
+        'XOR'        // this ties to value of XORTOK
+        );
 
+// Parser
+// identifier definitions
+   Compiler_Defined   =  -1;
+    System_Constant   =  -2;
+        System_Type   =  -3;
+   System_Procedure   =  -4;
+    System_Function   =  -5;
+  Structured_Result   =  -6;
+    Standard_Result   =  -7;
+  Compiler_Reserved   = -99;
+ XDP_SystemDeclared   = -65536;    // items defined by the SYSTEM unit
 
 
 type
-  TCharacter     = Char;
-  PCharacter     = PChar;
-  TString        = string;  
-  TShortString   = string;
-  TGenericString = string;
-  
-  PLongInt = ^LongInt;
-  
-  TInFile  = file;  
-  TOutFile = file;  
-  
-  TTokenKind =
-    (
-    EMPTYTOK,
+
+// General Types either independent or only depending on
+// a constant
+
+    TCharacter     = Char;
+    PCharacter     = PChar;
+    TString        = string;
+    TShortString   = string;
+    TGenericString = string;
+    TCurrency      = Array [1..16] of byte;    // Currency
+    TInt64         = array [1..2] of Integer; // 64-bit integer
+    TInt128        = array [1..4] of Integer; // 128-bit integer
+
+    TInFile  = file;
+    TOutFile = file;
+
+    PStringList = ^StringList;
+    StringList = Record
+        Prev,
+        Next: PStringList;
+        Item:   LPCSTR;
+    end;
+
+// Depedent types
+
+    PLongInt = ^LongInt;
+
+
+
+// Assembler
+
+    TRegister = (NOREG, EAX, ECX, EDX, ESI, EDI, EBP, AX, AH, AL);
+
+          AsmType = (NoOperands,           // opcode
+                     Reg,                  // opcode REG
+                     AddrReg,              // opcode [ Reg + ADDR ]
+                     Addr,                 // opcode [ addr ]
+                     Twovalue,             // opcode value,value
+                     TwoRegs,              // opcode REG,REG
+                     TwoRegsAddress,       // opcode REG,[REG+Addr]
+                     TwoRegsTwoValue,      // opcode REG, [Reg + Value + Value]
+                     ByteArray,            // byte   ARG,ARG,ARG, ..
+                     Wordarray,            // WORD   arg,arg,arg  ..
+                     IntArray,             // LONG   arg, ...
+                     CharString);          // string ' STRING'
+//{$dump symtab,all}
+//{$stop}
+       TAsmResult = record
+                  Size: Byte;            // number of opcode bytes, or number of byt/word/long values
+            case  Kind: AsmType of                   // What type of instruction
+                  Reg, AddrReg, Addr,
+                  TwoValue,
+                  TwoRegs, TwoRegsAddress,
+                  TwoRegsTwoValue:
+                 (Opcodes: Array[1..10] of byte;     // the opcode bytes
+            RegisterCount: Byte;                     // number of registrs used
+                Registers: Array[1..2] of TRegister; // registers actually used
+                   isName: Array[1..2] of boolean;   // are any values names as opposed to value or address
+                    Value: Array[1..2] of Integer);  // value or index into ident table
+             byteArray:  ( ByteVal: array[1..64] of byte);
+             WordArray:  ( WordVal: Array[1..32] of word);
+             IntArray:   ( IntVal:  Array[1..16] of long);
+             CharString: ( StrVal: String[64]);
+       end;
+
+
+ // scanner
+
+      // Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
+      // TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
+
+      // Also, if you add any tokens betweek ANDTOK and XORTOK these two
+      // are used as an index into the keyword list. And if you add a
+      // new keyword, it *must* be in alphabetical order. If it comes
+      // alphabetically before AND or after XOR, references to these in
+      // GETKEYWORD and GETTOKSPELLING need to change
+      TTokenKind =
+        (
+        EMPTYTOK,
+
+        COMMENTTOK,      // comments
+
+        // conditional compilation tokens
+        CCSIFTOK,        // $IF
+        CCSIFDEFTOK,     // $IFDEF
+        CCSIFNDEFTOK,    // $IFNDEF
+        CCSELSEIFTOK,    // $ELSEIF
+        CCSELSETOK,      // $ELSE
+        CCSENDIFTOK,     // $ENDIF
+        CCSDEFINETOK,    // $DEFINE
+        CCSUNDEFTOK,     // $UNDEF
+
+        JUNKTOK,         // anything not recognized
+        EOFTOK,          // end of file during buffered read
+        NULLTOK,         // need to reload token buffer
+
+        // C-style operators
+
+        PLUSEQTOK,       // +=
+        MINUSEQTOK,      // -=
+        MULEQTOK,        // *=
+        DIVEQTOK,        // /=
+
+        // if AAEC Pascal 8000 could have ** for exponentiation in 1980, we should now
+        EXPONTOK,        // **
+
+        // Limited set of assembler tokens
+        ASMLABELTOK,     // assembler label
+        ENDOFLINETOK,    // end of line found
+
+        // Delimiters
+        OPARTOK,         // (
+        CPARTOK,         // )
+        MULTOK,          // *
+        PLUSTOK,         // +
+        COMMATOK,        // ,
+        MINUSTOK,        // -
+        PERIODTOK,       // .
+        RANGETOK,        // ..
+        DIVTOK,          // /
+        COLONTOK,        // :
+        BECOMESTOK,      // :=  (formerly called "ASSIGNTOK")
+        SEMICOLONTOK,    // ;
+        LTTOK,           // <
+        LETOK,           // <=
+        NETOK,           // <>
+        EQTOK,           // =
+        GTTOK,           // >
+        GETOK,           // >=
+        ADDRESSTOK,      // @
+        OBRACKETTOK,     // [
+        CBRACKETTOK,     // ]
+        DEREFERENCETOK,  // ^
+
+
+    // Note if any of these are added (or removed), KEYWORD must be changed.
+    // Pay special attention to ANDTOK and XORTOK as they are directly referenced
+    // to its position in this list with respect to the corresponding list of
+    // keywords. Also, since the list is searched using a binary search, they
+    // **must** be declared in alphabetical order.
+
+        // Keywords
+        ANDTOK,           // AND
+        ARRAYTOK,         // ARRAY
+        ASMTOK,           // ASM
+        BEGINTOK,         // BEGIN
+        CASETOK,          // CASE
+        CONSTTOK,         // CONST
+        IDIVTOK,          // DIV
+        DOTOK,            // DO
+        DOWNTOTOK,        // DOWNTO
+        ELSETOK,          // ELSE
+        ENDTOK,           // END
+        FILETOK,          // FILE
+        FORTOK,           // FOR
+        FUNCTIONTOK,      // FUNCTION
+        GOTOTOK,          // GOTO
+        IFTOK,            // IF
+        IMPLEMENTATIONTOK,// IMPLEMENTATION
+        INTOK,            // IN
+        INTERFACETOK,     // INTERFACE
+        LABELTOK,         // LABEL
+        MODTOK,           // MOD
+        NILTOK,           // NIL
+        NOTTOK,           // NOT
+        OFTOK,            // OF
+        ORTOK,            // OR
+        PACKEDTOK,        // PACKED
+        PROCEDURETOK,     // PROCEDURE
+        PROGRAMTOK,       // PROGRAM
+        RECORDTOK,        // RECORD
+        REPEATTOK,        // REPEAT
+        SETTOK,           // SET
+        SHLTOK,           // SHL
+        SHRTOK,           // SHR
+        STRINGTOK,        // STRING
+        THENTOK,          // THEN
+        TOTOK,            // TO
+        TYPETOK,          // TYPE
+        UNITTOK,          // UNIT
+        UNTILTOK,         // UNTIL
+        USESTOK,          // USES
+        VARTOK,           // VAR
+        WHILETOK,         // WHILE
+        WITHTOK,          // WITH
+        XORTOK,           // XOR
+
+        // User tokens
+        IDENTTOK,         // identifier
+        INTNUMBERTOK,     // integer number
+        INT64NUMBERTOK,   // 64-bit integer
+        INT128NUMBERTOK,  // 128-bit integer
+        CURRENCYTOK,      // 31-digit currency value
+        REALNUMBERTOK,    // real number
+        BOOLEANTOK,       // decision
+        CHARLITERALTOK,   // literal char
+        STRINGLITERALTOK, // literal string
+
+        // errors we try to recover from
+        ERRUNTERMSTRING, // unterminated string
+        ERRSEMIEQTOK,    // ;= error
+
+        // Used for error messages
+        ERRCHARTOK,       // 'character'
+        ERRDIGITTOK,      // 'digit'
+        ERRNUMBERTOK,     // 'number'
+        ERRSTMTTOK,       // 'statement';
+        ERRLINETOK        // 'line'
+
+        );
+
+
+
+     TBuffer = record
+        Ptr: PCharacter;
+        Size,                            // size of file
+        Pos: Integer;                    // position in file
+      end;
+
+
+// parser / scanner
+
+   TUnitStatus = record
+       Index: Byte;
+       UsedUnits: set of Byte;
+   end;
+
+  TParserState = record
+      IsUnit,
+      IsInterfaceSection: Boolean;
+      ProcFuncName:String;             // current Procedure/Function Being Compiled
+      UnitStatus: TUnitStatus;
+   end;
+
+var
+     UnitStatus: TUnitStatus;
+     ParserState: TParserState;
+
+     // for user program debugging
+     NonStop:Boolean = FALSE; // ignore {$STOP in unit
+     CanDebug: Boolean=TRUE;  // user can {$ENABLE debug
+     EnableDebug: Boolean; // user has not enabled debgging
+     Debugging:Boolean = FALSE; // is debugging
+
+     // for $INCLUDE files
+     inInclude: Boolean = False;   // not now in $INCLUDE file
+
+ const
+  // dependent constants
+
+    Digits:    set of TCharacter = ['0'..'9'];
+    HexDigits: set of TCharacter = ['0'..'9', 'A'..'F'];
+    Spaces:    set of TCharacter = [#1..#31, ' '];
+    // to allow for EBCDIC or ASCII this uses smaller blocks of chars
+  Identifiers: Set of TCharacter = ['A'..'I', 'J'..'R', 'S'..'Z',
+                                      'a'..'i', 'j'..'r', 's'..'z','_'];
+    AlphaNums: set of TCharacter = ['0'..'9', 'A'..'I', 'J'..'R', 'S'..'Z',
+                                              'a'..'i', 'j'..'r', 's'..'z','_'];
+
+type
+
+// Scanner
+
+    // if adding a new type, be sure to check:
+    //    "predefined type indexes"
+    //    procedure DeclarePredefinedTypes
+    //    TTypeKind
+    //    function GetTypeSpelling
+  TTypeKind = (	EMPTYTYPE,      ANYTYPE,        INTEGERTYPE,    INT64TYPE,
+                INT128TYPE,     CURRENCYTYPE,   SMALLINTTYPE,   SHORTINTTYPE,
+                WORDTYPE,       BYTETYPE,       CHARTYPE,       BOOLEANTYPE,
+                REALTYPE,       SINGLETYPE,     POINTERTYPE,    FILETYPE,
+                ARRAYTYPE,      RECORDTYPE,     INTERFACETYPE,  SETTYPE,
+                PROCEDURALTYPE, METHODTYPE,     ENUMERATEDTYPE, SUBRANGETYPE,
+                FORWARDTYPE);
+
+    TToken = record
+       Name: TString;     // For easy analysis, this is always in upper case
+       DeclaredPos,            // Where it was declared
+       DeclaredLine:Integer;
+       case Kind: TTokenKind of
+           IDENTTOK:         (NonUppercaseName: TShortString);  // This is needed
+                                                                // in the case of EXTERNAL procedures where the name
+                                                                // might have to be in mixed case
+           INT64NUMBERTOK:   (Int64Value:TInt64);
+           INT128NUMBERTOK:  (Int128Value:TInt128);
+           CURRENCYTOK:      (CurrencyValue:TCurrency);
+           INTNUMBERTOK:     (OrdValue: LongInt);    // For all other ordinal types
+           REALNUMBERTOK:    (RealValue: Double);
+           STRINGLITERALTOK: (StrAddress: Integer;
+                              StrLength: Integer);
+   end;
+
     
-    // Delimiters        
-    OPARTOK,
-    CPARTOK,
-    MULTOK,
-    PLUSTOK,
-    COMMATOK,
-    MINUSTOK,
-    PERIODTOK,
-    RANGETOK,
-    DIVTOK,
-    COLONTOK,
-    ASSIGNTOK,
-    SEMICOLONTOK,
-    LTTOK,
-    LETOK,
-    NETOK,
-    EQTOK,
-    GTTOK,
-    GETOK,
-    ADDRESSTOK,
-    OBRACKETTOK,
-    CBRACKETTOK,
-    DEREFERENCETOK,
-
-    // Keywords
-    ANDTOK,
-    ARRAYTOK,
-    BEGINTOK,
-    CASETOK,
-    CONSTTOK,
-    IDIVTOK,
-    DOTOK,
-    DOWNTOTOK,
-    ELSETOK,
-    ENDTOK,
-    FILETOK,
-    FORTOK,
-    FUNCTIONTOK,
-    GOTOTOK,
-    IFTOK,
-    IMPLEMENTATIONTOK,
-    INTOK,
-    INTERFACETOK,
-    LABELTOK,
-    MODTOK,
-    NILTOK,
-    NOTTOK,
-    OFTOK,
-    ORTOK,
-    PACKEDTOK,
-    PROCEDURETOK,
-    PROGRAMTOK,
-    RECORDTOK,
-    REPEATTOK,
-    SETTOK,
-    SHLTOK,
-    SHRTOK,
-    STRINGTOK,
-    THENTOK,
-    TOTOK,
-    TYPETOK,
-    UNITTOK,
-    UNTILTOK,
-    USESTOK,
-    VARTOK,
-    WHILETOK,
-    WITHTOK,
-    XORTOK,
-
-    // User tokens
-    IDENTTOK,
-    INTNUMBERTOK,
-    REALNUMBERTOK,
-    CHARLITERALTOK,
-    STRINGLITERALTOK    
-    );
-    
-  TToken = record
-    Name: TString;
-  case Kind: TTokenKind of
-    IDENTTOK:         (NonUppercaseName: TShortString);  
-    INTNUMBERTOK:     (OrdValue: LongInt);                   // For all ordinal types
-    REALNUMBERTOK:    (RealValue: Double);
-    STRINGLITERALTOK: (StrAddress: Integer;
-                       StrLength: Integer);
-  end;
-  
-  TTypeKind = (EMPTYTYPE, ANYTYPE, INTEGERTYPE, SMALLINTTYPE, SHORTINTTYPE, WORDTYPE, BYTETYPE, CHARTYPE, BOOLEANTYPE, REALTYPE, SINGLETYPE,
-               POINTERTYPE, FILETYPE, ARRAYTYPE, RECORDTYPE, INTERFACETYPE, SETTYPE, ENUMERATEDTYPE, SUBRANGETYPE, 
-               PROCEDURALTYPE, METHODTYPE, FORWARDTYPE);  
+      TScannerState = record
+        Token: TToken;      // Current token
+        UnitName,           // current unit
+        FileName: TString;  // name of file
+        ProcCount,          // number of procedures
+        FuncCount,          // and functions in unit
+        ExtFunc,            // number of External Procedures
+        ExtProc,            // and functions in unit
+        Position,           // current position in
+        Line: Integer;      // line being examined
+        Buffer: TBuffer;
+        ch, ch2: TCharacter;
+        inComment,           // we're inside a comment
+        IOCheck,             // IOChecking handled by {$I+ or {$I-} on a per-file basis
+        EndOfUnit: Boolean;  // end of file
+      end;
 
 
 
-const
-  // Predefined type indices
-  ANYTYPEINDEX          = 1;      // Untyped parameter, or base type for untyped pointers and files
-  INTEGERTYPEINDEX      = 2;
-  SMALLINTTYPEINDEX     = 3;
-  SHORTINTTYPEINDEX     = 4;
-  WORDTYPEINDEX         = 5;
-  BYTETYPEINDEX         = 6;  
-  CHARTYPEINDEX         = 7;
-  BOOLEANTYPEINDEX      = 8;
-  REALTYPEINDEX         = 9;      // Basic real type: 64-bit double (all temporary real results are of this type)
-  SINGLETYPEINDEX       = 10;
-  POINTERTYPEINDEX      = 11;     // Untyped pointer, compatible with any other pointers
-  FILETYPEINDEX         = 12;     // Untyped file, compatible with text files
-  STRINGTYPEINDEX       = 13;     // String of maximum allowed length
-
-
-
-type  
-  TByteSet = set of Byte;
+  TByteSet  = set of Byte;
 
   TConst = packed record
   case Kind: TTypeKind of
     INTEGERTYPE: (OrdValue: LongInt);         // For all ordinal types 
     REALTYPE:    (RealValue: Double);
+    INT64TYPE:   (Int64Value:TInt64);
+    INT128TYPE:  (Int128Value:TInt128);
+    CURRENCYTYPE:(CurrencyValue: TCurrency);
     SINGLETYPE:  (SingleValue: Single);
     ARRAYTYPE:   (StrValue: TShortString);
+    POINTERTYPE: (PointerValue: Pointer);
     SETTYPE:     (SetValue: TByteSet);        // For all set types    
   end;   
   
@@ -189,34 +510,35 @@ type
   
   PParams = array [1..MAXPARAMS] of PParam;   
     
-  TIdentKind = (EMPTYIDENT, GOTOLABEL, CONSTANT, USERTYPE, VARIABLE, PROC, FUNC);
-  
+  TIdentKind = (EMPTYIDENT, UNITIDENT, GOTOLABEL, CONSTANT, USERTYPE, VARIABLE, PROC, FUNC);
+
   TScope = (EMPTYSCOPE, GLOBAL, LOCAL);
   
   TRelocType = (EMPTYRELOC, CODERELOC, INITDATARELOC, UNINITDATARELOC, IMPORTRELOC);
   
   TCallConv = (DEFAULTCONV, STDCALLCONV, CDECLCONV);
-  
-  TPredefProc = 
+
+  TPredefProc =
     (
     EMPTYPROC,
     
     // Procedures     
-    INCPROC, 
-    DECPROC, 
+    INCPROC,      // inc
+    DECPROC,      // dec
     READPROC, 
     WRITEPROC, 
     READLNPROC, 
-    WRITELNPROC, 
-    NEWPROC, 
-    DISPOSEPROC, 
-    BREAKPROC, 
-    CONTINUEPROC,
-    EXITPROC,
-    HALTPROC,
+    WRITELNPROC,
+    INLINEPROC,     // INLINE(n,N);
+    NEWPROC,        // new
+    DISPOSEPROC,    // dispose
+    BREAKPROC,      // These four: Break, Continue,
+    CONTINUEPROC,   // Exit, and Halt, are styled as
+    EXITPROC,       // if they were procedures but are
+    HALTPROC,       // handled internally by the compiler
 
     // Functions
-    SIZEOFFUNC,
+    SIZEOFFUNC,     // SIZEOF(
     ORDFUNC,
     CHRFUNC,
     LOWFUNC,
@@ -225,48 +547,76 @@ type
     SUCCFUNC,
     ROUNDFUNC,
     TRUNCFUNC,
-    ABSFUNC,
-    SQRFUNC,
-    SINFUNC,
-    COSFUNC,
-    ARCTANFUNC,
-    EXPFUNC,
-    LNFUNC,
-    SQRTFUNC
-    );
+    ABSFUNC,    // Pascal STD Func ABS()
+    SQRFUNC,	//        	SQR()
+    SINFUNC,	//		SIN()
+    COSFUNC,	//		COS()
+    ARCTANFUNC,	//	`	ARCTAN()
+    EXPFUNC,	//		EXP()
+    LNFUNC,	//		LN()
+    SQRTFUNC	//		SQRT()
+    );		// Missing:  EOF() EOLN() and ODD()
     
   TSignature = record
     NumParams: Integer;
     NumDefaultParams: Integer;
     Param: PParams;
+    Line,
     ResultType: Integer;
     CallConv: TCallConv;
-  end;      
+  end;
+
+  CrossP      = ^TCross;     // cross reference item
+  UsageP      = ^TUsage;     // uses of cross-referenced item
+  IdentP      = ^TIdentifier;// A specific identifier
+  TraceP      = ^TTrace;     // Trace table for debugging
 
   TIdentifier = record
-    Kind: TIdentKind;
+    Prev,                    // Links for when this is a linked list
+    Next: IdentP;            // instead of an array
+    Cross: CrossP;           // pointer to its cros-reference list
+    Kind: TIdentKind;        // CONST, TYPE, PROC, FUNC, etc.
     Name: TString;
+    // The following two items have two uses. (1) For procedural types
+    // declared FORWARD (or proc/func signatures in the IMPLEMENTATION
+    // section of a unit, the line number where it was declared if
+    // they do not define the proc/func. (2) For unused VARs the line
+    // number and position on the line where declared.
+    DeclaredLine,            // Line Bumber in file it was declared
+    DeclaredPos,             // Position on that line where declared
     DataType: Integer;
     Address: LongInt;
     ConstVal: TConst;
     UnitIndex: Integer;
-    Block: Integer;                             // Index of a block in which the identifier is defined
+    Block: Integer;                   // Index of a block in which the identifier is defined
+    isAbsolute: Boolean;              // is the variable declared an absolute address
+                                      // or is the proc/func external
     NestingLevel: Byte;
-    ReceiverName: TString;                      // Receiver variable name for a method    
-    ReceiverType: Integer;                      // Receiver type for a method
+    ReceiverName: TString;            // Receiver variable name for a method
+    ReceiverType: Integer;            // Receiver type for a method
     Scope: TScope;
     RelocType: TRelocType;
-    PassMethod: TPassMethod;                    // Value, CONST or VAR parameter status
+    PassMethod: TPassMethod;          // Value, CONST or VAR parameter status
     Signature: TSignature;
     ResultIdentIndex: Integer;
     ProcAsBlock: Integer;
     PredefProc: TPredefProc;
-    IsUsed: Boolean;
+    IsUsed: Boolean;                 // to warn of unused variables
     IsUnresolvedForward: Boolean;
     IsExported: Boolean;
     IsTypedConst: Boolean;
     IsInCStack: Boolean;
-    ForLoopNesting: Integer;                    // Number of nested FOR loops where the label is defined
+    ForLoopNesting: Integer;          // Number of nested FOR loops where the label is defined
+  end;
+
+  TTrace = record                     // for procedure tracing
+    isFunc: Boolean;                  // procedure or function
+    StartLine,                        // first line no. of proc/func
+    EndLine,                          // last line no.
+    startAddress,                     // start and end addresses
+    EndAddress: Integer;              // of this procedure's code
+    UnitID: Byte;                     // unit number
+    Name: TString;                    // procedure name
   end;
 
   TField = record
@@ -275,11 +625,14 @@ type
     Offset: Integer;
   end;
 
-  PField = ^TField;    
+  PField = ^TField;
+  TypePtr = ^TType;
 
-  TType = record    
+  TType = record
+    Prev,                   // links for when this is a linked list
+    Next: TypePtr;
     Block: Integer;
-    BaseType: Integer;
+    BaseType: Integer;      // indexes to another type
     AliasType: Integer;
     
   case Kind: TTypeKind of     
@@ -290,7 +643,8 @@ type
                       
     RECORDTYPE, INTERFACETYPE: (NumFields: Integer;
                                 Field: array [1..MAXFIELDS] of PField);
-                      
+
+
     PROCEDURALTYPE:            (Signature: TSignature;
                                 SelfPointerOffset: LongInt);  // For interface method variables as temporary results
     
@@ -308,21 +662,75 @@ type
     Name: TString;
   end;
 
-  TUnitStatus = record
-    Index: Integer;
-    UsedUnits: set of Byte;
-  end;      
-  
   TWithDesignator = record
     TempPointer: Integer;
     DataType: Integer;
     IsConst: Boolean;
   end;
-  
+
+  // Eventually I will stop using the indirect procedures
+  // but I will save the definitions and examples as they provide
+  // interesting, useful functionality, such as defining different routines to
+  // execute dynamically at run-time. Besides, the replacement must be done
+  // carefully, as the last time i tried it crashed this compiler so badly
+  // I had to back out all changes and use a diff/merge tool to carefully
+  // re-add them individually until I discovered what broke it.
   TWriteProc = procedure (ClassInstance: Pointer; const Msg: TString);
   
-  
-  
+
+
+  TCross = Record
+     Prev,                  // Pointers to items in list
+     Next: CrossP;
+     UnitNumber:Byte;
+     Name,                  // Name of this identifier
+     ProcName: TString;     // if local to a procedure
+     Page,                  // Location in listing
+     Line,
+     LocalLine: Integer;    // line number in unit/file
+     Usage: UsageP;         // List of usage
+  end;
+
+  TUsage = Record    // Cross reference
+      Next: UsageP;
+      Page,                     // Location in listing
+      Line,
+      LocalLine: Integer;       // line number in unit
+   end;
+
+
+    // Internals - for compiler tracing
+
+    // makse sure you change SHOW/$HIDE through
+    // proc OptionShowHide in unit Scanner if
+    // you aded new options
+      TraceType = (
+                   ActivityCTrace,        // procedurecs/funcs called by the Parser
+                   BecomesCTrace,       // := assignments
+                   BlockCTrace,         // begin and repeat blocks
+                   CallCTrace,          // proc and function calls
+                   CodeCTrace,          // actual code being generated
+                   CodeGenCTrace,       // see what is being called for code generation
+                   CommentCTrace,       // comment trace
+                   CStatistics,         // compiler statistics
+                   FuncCTrace,          // functions
+                   IdentCTrace,         // identifiers
+                   IndexCtrace,         // index value on call to start compiling a block
+                   InputCtrace,         // have compile list what it is reading
+                   InputHexCTrace,      // dump input in char and hex
+                   KeywordCTrace,       // all keywords
+                   LoopCTrace,          // Loops: For, Repeat, While
+                   NarrowCTrace,        // show one token per line
+                   ProcCTrace,          // Procedures
+                   SymbolCTrace,        // symbols
+                   TokenCTrace,         // tokens in general (basically everything)
+                   UnitCTrace          // unit and program
+                   );
+
+
+  // parser
+
+
 const    
   // Operator sets  
   MultiplicativeOperators = [MULTOK, DIVTOK, IDIVTOK, MODTOK, SHLTOK, SHRTOK, ANDTOK];
@@ -336,28 +744,146 @@ const
 
   // Type sets
   IntegerTypes     = [INTEGERTYPE, SMALLINTTYPE, SHORTINTTYPE, WORDTYPE, BYTETYPE];
+  Int64Types       = IntegerTypes + [INT64TYPE];
+  Int128Types      = Int64Types + [INT128TYPE];
   OrdinalTypes     = IntegerTypes + [CHARTYPE, BOOLEANTYPE, SUBRANGETYPE, ENUMERATEDTYPE];
   UnsignedTypes    = [WORDTYPE, BYTETYPE, CHARTYPE];
   NumericTypes     = IntegerTypes + [REALTYPE];
+  CurrencyTypes    = NumericTypes + [CURRENCYTYPE];
   StructuredTypes  = [ARRAYTYPE, RECORDTYPE, INTERFACETYPE, SETTYPE, FILETYPE];
-  CastableTypes    = OrdinalTypes + [POINTERTYPE, PROCEDURALTYPE];     
-  
-  
+  CastableTypes    = OrdinalTypes + [POINTERTYPE, PROCEDURALTYPE];
+
 
 var
+
+// Scanner
+
+       AsmResult: TAsmResult;
+       LastKeyTok,               // the last keyword token of executable condition: IF, REPEAT, PROCEDURE, BEFGIN, etc.
+                                 // directive being an identifier, an executable keyword
+                                 // IF, GOTO, assignment, call, REPEAT, FOR . BEGIN, UNTIL, etc.
+       Tok: TToken;
+       TokenBuffer: Array[1..MaxTokens] of TToken; // used by the assembler
+
+
+
+  // CompilerTrace
+
+  ShowToken: Boolean = FALSE;
+  ShowParse: Boolean = FALSE;
+  ShowTokenLine: Boolean = FALSE;
+  TraceCompiler: Set of TraceType = [];  // default to trace nothing;
+  // for severe analysis needs, set
+  // to TOKEN which is (almost) everything
+  LinePrefix: String[10];
+  LineString: String = '';
+  LineBuf: Array[0..255] of byte;  // copy of input ss read in bytes
+  LinebufPtr: Byte=0;              // length of buffer as used
+
+  // scanner
+
+  ScannerState: TScannerState;
+
+
+
+    SysDef,                  // Consider all idents system identifiers
+    SysIdent,                // Allow identifires to have $ in them; this is
+                             // used to create procedures, functions or variables
+                             // that user code can not call (or accidentally override)
+    isLocal,                 // are identifiers in a procedure/function or
+                             // are they global to the unit?
+    isMainProgram: Boolean;  // is this the main program as opposed to a procedure
+
+    // these indicate block level at start and end of line
+    LineBlockChange :Boolean;
+    LineBlockStart,
+    LineBlockEnd: Byte;
+
+    // To count statement blocks: Begin, Repeat, Case;
+    // Increase on BEGIN, DECREASE on END
+    // increase on REPEAT, DECREASE on UNTIL
+    // Increase on CASE, DECREASE on END
+
+     BlockCount: Integer =0; // +1 on BEGIn / REPEAT / CASE; -1 on END / UNTIL
+     BeginCount: Integer = 0;     // Starts at 0 each proc/func,
+                                  // +1 on begin, -1 on END
+
+     FirstStatement: Boolean;     // Is this the first statement on a line?
+
+     LastIdentifier: String;      // previous identifier, used in modifier assignment
+     Skipping: Boolean;            // Global Var to indicate in Skipping mode (See Conditional unit)
+
+
+
+  ScannerStack: array [1..SCANNERSTACKSIZE] of TScannerState;
+  ScannerStackTop: Integer = 0;
+
+  CodeSize: Integer;             // Moved from CodeGen
+
+  // since the array was searched sequentially, it
+  // should be relatively easy to move to
+  // a linked list of pointers
+
+  // Where a list is established by pointers, -BASE points
+  // to the initial start of the list, -TOP points to the latest entry.
+  NewIdent,             // item being searched
+  IdentBase,            // These will point to the base and
+  IdentTop: IdentP;     // the top of the idetifier linked list
+
+  SearchType,              // used when searching for types
+  BaseType,             // base
+  TopType: TypePtr;     // and top of type list
+  CrossBase,            // base and top of cross-refernce table
+  CrossTop: CrossP;     // cross reference item
+
+  // Once we go to pointers insted of arrays, most of these wll either
+  // change to a linked list, to a pointer, or disappear entirely
+
   Ident: array [1..MAXIDENTS] of TIdentifier;
   Types: array [1..MAXTYPES] of TType;
   InitializedGlobalData: array [0..MAXINITIALIZEDDATASIZE - 1] of Byte;
-  Units: array [1..MAXUNITS] of TUnit;  
+  Units: array [1..MAXUNITS] of TUnit;
+  Extensions: array [1..MAXEXTENSIONS] of TString;
   Folders: array [1..MAXFOLDERS] of TString;
+//  Folders: FolderListP;
   BlockStack: array [1..MAXBLOCKNESTING] of TBlock;
   WithStack: array [1..MAXWITHNESTING] of TWithDesignator;
 
-  NumIdent, NumTypes, NumUnits, NumFolders, NumBlocks, BlockStackTop, ForLoopNesting, WithNesting,
-  InitializedGlobalDataSize, UninitializedGlobalDataSize: Integer;
-  
+  NumIdent: integer =0;                // index into identifier table; usually points to the last defined identifier
+  MaxIdentCount: integer = 0;          // largest number of identifiers ever used
+  TotalIdent: integer =0;              // number of identifiers used in entire program
+  TotalExtProc: Integer = 0;           // number of External Procedures
+  TotalExtFunc: Integer = 0;           // and functions
+  TotalProcCount: Integer = 0;         // number of Procedures
+  TotalFuncCount: Integer = 0;         // and functions in program
+  UnitLocalIdent,           // identifoers declared at unit level
+  UnitGlobalIdent,          // Identifiers declared in procs/funcs
+  UnitTotalIdent: Integer;  // Number of identifiers this unit
+
+  NumTypes, NumUnits, NumFolders,
+  NumBlocks, BlockStackTop, ForLoopNesting,
+  WithNesting, InitializedGlobalDataSize,
+  UninitializedGlobalDataSize: Integer;
   IsConsoleProgram: Boolean;
-  TotalLines: LongInt; // Total number of lines read/compiled
+
+
+// FOR PROGRAM LISTING AND COMPILER DEBUGGING
+   ListProgram,
+   CrossReference,
+   Statistics: Boolean;
+   ListingLine,
+   ListingPage: Integer;
+   ListingPageLine,
+   ListingPos,
+   ListingProcLevelOpen,
+   ListingProcLevelClose,
+   ListingBlockLevelOpen,
+   ListingBlockLevelClose: Byte;
+
+
+   TotalLines: LongInt = 0; // Total number of lines read/compiled
+
+ //   TestInit:  TestRecord = (Hi:=5; Lo:=6);
 
 
 procedure InitializeCommon;
@@ -366,98 +892,39 @@ procedure CopyParams(var LeftSignature, RightSignature: TSignature);
 procedure DisposeParams(var Signature: TSignature);
 procedure DisposeFields(var DataType: TType);
 function GetTokSpelling(TokKind: TTokenKind): TString;
-function GetTypeSpelling(DataType: Integer): TString;
+function GetTypeSpelling(DataType: Integer; LongDesc:Boolean=TRUE): TString;
+function GetIDKindSpelling(IDKind:TIdentKind): Char;
+function GetPassSpelling(Pass:TPassMethod):TString;
 function Align(Size, Alignment: Integer): Integer;
-procedure SetWriteProcs(ClassInstance: Pointer; NewNoticeProc, NewWarningProc, NewErrorProc: TWriteProc);
+
+
+// used for indirect procedures
+procedure SetWriteProcs(ClassInstance: Pointer; NewNoticeProc, NewWarningProc, NewErrorProc: TWriteProc);        // indirect procedure
 procedure Notice(const Msg: TString);
 procedure Warning(const Msg: TString);
-procedure Error(const Msg: TString);
-procedure DefineStaticString(const StrValue: TString; var Addr: LongInt; FixedAddr: LongInt = -1);
-procedure DefineStaticSet(const SetValue: TByteSet; var Addr: LongInt; FixedAddr: LongInt = -1);
 function IsString(DataType: Integer): Boolean;
-function LowBound(DataType: Integer): Integer;
-function HighBound(DataType: Integer): Integer;
-function TypeSize(DataType: Integer): Integer;
-function GetTotalParamSize(const Signature: TSignature; IsMethod, AlwaysTreatStructuresAsReferences: Boolean): Integer;
-function GetCompatibleType(LeftType, RightType: Integer): Integer;
-function GetCompatibleRefType(LeftType, RightType: Integer): Integer;
-procedure CheckOperator(const Tok: TToken; DataType: Integer);
-procedure CheckSignatures(var Signature1, Signature2: TSignature; const Name: TString; CheckParamNames: Boolean = TRUE); 
-procedure SetUnitStatus(var NewUnitStatus: TUnitStatus);
-function GetUnitUnsafe(const UnitName: TString): Integer;
-function GetUnit(const UnitName: TString): Integer;
+// procedure SetUnitStatus(var NewUnitStatus: TUnitStatus);
 function GetKeyword(const KeywordName: TString): TTokenKind;
-function GetIdentUnsafe(const IdentName: TString; AllowForwardReference: Boolean = FALSE; RecType: Integer = 0): Integer;
-function GetIdent(const IdentName: TString; AllowForwardReference: Boolean = FALSE; RecType: Integer = 0): Integer;
-function GetFieldUnsafe(RecType: Integer; const FieldName: TString): Integer;
-function GetField(RecType: Integer; const FieldName: TString): Integer;
-function GetFieldInsideWith(var RecPointer: Integer; var RecType: Integer; var IsConst: Boolean; const FieldName: TString): Integer;
-function GetMethodUnsafe(RecType: Integer; const MethodName: TString): Integer;
-function GetMethod(RecType: Integer; const MethodName: TString): Integer;
-function GetMethodInsideWith(var RecPointer: Integer; var RecType: Integer; var IsConst: Boolean; const MethodName: TString): Integer;
-function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
-function Hex(N:Longint):string;
 Function Plural(N:LongInt; Plu:String; Sng: String):   string;
+Function Comma(K:Longint; Sep:char =','):string;
+Function CommaP(N:LongInt; Plu:String; Sng: String; Sep:char =','):   string;
+function I2(N:Word):string;
+Function GetScopeSpelling(Scope: TScope): TString;
+Procedure NewString(Var SA: LPCSTR);
+Procedure DisposeString(Var SA: LPCSTR);
 
 
 implementation
 
 
-const
-  Keyword: array [1..NUMKEYWORDS] of TString = 
-    (
-    'AND',
-    'ARRAY',
-    'BEGIN',
-    'CASE',
-    'CONST',
-    'DIV',
-    'DO',
-    'DOWNTO',
-    'ELSE',
-    'END',
-    'FILE',
-    'FOR',
-    'FUNCTION',
-    'GOTO',
-    'IF',
-    'IMPLEMENTATION',
-    'IN',
-    'INTERFACE',
-    'LABEL',
-    'MOD',
-    'NIL',
-    'NOT',
-    'OF',
-    'OR',
-    'PACKED',
-    'PROCEDURE',
-    'PROGRAM',
-    'RECORD',
-    'REPEAT',
-    'SET',
-    'SHL',
-    'SHR',
-    'STRING',
-    'THEN',
-    'TO',
-    'TYPE',
-    'UNIT',
-    'UNTIL',
-    'USES',
-    'VAR',
-    'WHILE',
-    'WITH',
-    'XOR'
-    );
- 
-
-
 var
-  NoticeProc, WarningProc, ErrorProc: TWriteProc;
+  NoticeProc, WarningProc, ErrorProc: TWriteProc;         // indirect procedures
   WriteProcsClassInstance: Pointer;
-  UnitStatus: TUnitStatus;
-  
+
+
+
+  StringManager: PStringList;
+
 
 
 procedure InitializeCommon;
@@ -481,9 +948,7 @@ UninitializedGlobalDataSize := 0;
 IsConsoleProgram            := TRUE;  // Console program by default
 end;
 
-
-
-
+//  FIXME when using pointers, dispose of them, too
 procedure FinalizeCommon;
 var
   i: Integer;
@@ -520,7 +985,7 @@ end;
 
 
 
-
+//  FIXME when using pointers, dispose of them, too
 procedure DisposeParams(var Signature: TSignature);
 var
   i: Integer;
@@ -531,7 +996,7 @@ end;
 
 
 
-
+//  FIXME when using pointers, dispose of them, too
 procedure DisposeFields(var DataType: TType);
 var
   i: Integer;
@@ -541,8 +1006,10 @@ for i := 1 to DataType.NumFields do
 end; 
 
 
-
-
+// This is in common bcause it is used by both 
+// Scanner and Parser`
+// Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
+// TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
 function GetTokSpelling(TokKind: TTokenKind): TString;
 begin
 case TokKind of
@@ -557,7 +1024,7 @@ case TokKind of
   RANGETOK:                          Result := '..';
   DIVTOK:                            Result := '/';
   COLONTOK:                          Result := ':';
-  ASSIGNTOK:                         Result := ':=';
+  BECOMESTOK:                        Result := ':=';
   SEMICOLONTOK:                      Result := ';';
   LTTOK:                             Result := '<';
   LETOK:                             Result := '<=';
@@ -570,10 +1037,40 @@ case TokKind of
   CBRACKETTOK:                       Result := ']';
   DEREFERENCETOK:                    Result := '^';
   ANDTOK..XORTOK:                    Result := Keyword[Ord(TokKind) - Ord(ANDTOK) + 1];
+
+  PLUSEQTOK:                         Result := '+=';
+  MINUSEQTOK:                        Result := '-=';
+  MULEQTOK:                          Result := '*=';
+  DIVEQTOK:                          Result := '/=';
+  JUNKTOK:                           Result := 'unrecognized character';
+
+  COMMENTTOK:                        Result := 'Text Comment';
+  CCSIFTOK:                          Result := '$IF Compiler Directive';
+  CCSIFDEFTOK:                       Result := '$IFDEF Compiler Directive';
+  CCSIFNDEFTOK:                      Result := '$IFNDEF Compiler Directive';
+  CCSELSEIFTOK:                      Result := '$ELSEIF Compiler Directive';
+  CCSELSETOK:                        Result := '$ELSE Compiler Directive';
+  CCSENDIFTOK:                       Result := '$ENDIF Compiler Directive';
+  CCSDEFINETOK:                      Result := '$DEFINE Compiler Directive';
+  CCSUNDEFTOK:                       Result := '$UNDEF Compiler Directive';
+
   IDENTTOK:                          Result := 'identifier';
-  INTNUMBERTOK, REALNUMBERTOK:       Result := 'number';
+  INTNUMBERTOK:                      Result := 'integer';
+  REALNUMBERTOK:                     Result := 'real number';
   CHARLITERALTOK:                    Result := 'character literal';
-  STRINGLITERALTOK:                  Result := 'string literal'
+  STRINGLITERALTOK:                  Result := 'string literal';
+  ASMLABELTOK:                       Result := 'assembler label';
+
+  // pure errors
+  ERRSEMIEQTOK:                      Result := ';='; // ;= isn't right, dummy!
+
+  // Error message fields
+  ERRCHARTOK:                        Result := 'character';
+  ERRDIGITTOK:                       Result := 'digit';
+  ERRNUMBERTOK:                      Result := 'number';
+  ERRSTMTTOK:                        Result := 'statement';
+  ERRLINETOK:                        Result := 'line'
+
 else
   Result := 'unknown token';
 end; //case
@@ -581,45 +1078,69 @@ end;
 
 
 
-
-function GetTypeSpelling(DataType: Integer): TString;
+// make sure Keyword is updated if you change this
+function GetTypeSpelling(DataType: Integer; LongDesc:Boolean=TRUE): TString;
 begin
 case Types[DataType].Kind of
-  EMPTYTYPE:      Result := 'no type';
-  ANYTYPE:        Result := 'any type';
-  INTEGERTYPE:    Result := 'integer';
-  SMALLINTTYPE:   Result := 'small integer';
-  SHORTINTTYPE:   Result := 'short integer';
-  WORDTYPE:       Result := 'word';
-  BYTETYPE:       Result := 'byte';
-  CHARTYPE:       Result := 'character';
-  BOOLEANTYPE:    Result := 'Boolean';
-  REALTYPE:       Result := 'real';
-  SINGLETYPE:     Result := 'single-precision real';
+  EMPTYTYPE:     if LongDesc then  Result := 'no type'       else Result := 'NONE';
+  ANYTYPE:       if LongDesc then  Result := 'any type'      else Result := 'ANY ';
+  INT64TYPE:     if LongDesc then  Result := 'integer 64'    else Result := 'I64 ';
+  INT128TYPE:    if LongDesc then  Result := 'integer 128'   else Result := 'I128';
+  INTEGERTYPE:   if LongDesc then  Result := 'integer'       else Result := 'I   ';
+  SMALLINTTYPE:  if LongDesc then  Result := 'small integer' else Result := 'smI ';
+  SHORTINTTYPE:  if LongDesc then  Result := 'short integer' else Result := 'SHI ';
+  WORDTYPE:                        Result := 'word';
+  BYTETYPE:                        Result := 'byte';
+  CHARTYPE:      if LongDesc then  Result := 'character'     else Result := 'char';
+  BOOLEANTYPE:   if LongDesc then  Result := 'Boolean'       else Result := 'bool';
+  REALTYPE:                        Result := 'real';
+//  DOUBLETYPE:  if LongDesc then  Result := 'double-precision real' else Result := 'dpR ';
+  SINGLETYPE:    if LongDesc then  Result := 'single-precision real' else Result := 'sgR ';
   POINTERTYPE:    begin
-                  Result := 'pointer';
+                 if LongDesc then  Result := 'pointer'       else Result := 'ptr ';
                   if Types[Types[DataType].BaseType].Kind <> ANYTYPE then
-                    Result := Result + ' to ' + GetTypeSpelling(Types[DataType].BaseType);
+                    if LongDesc then Result := Result + ' to ' + GetTypeSpelling(Types[DataType].BaseType)
+                                else Result := 'p ->'+GetTypeSpelling(Types[DataType].BaseType, FALSE);
                   end;  
   FILETYPE:       begin
-                  Result := 'file';
-                  if Types[Types[DataType].BaseType].Kind <> ANYTYPE then
-                    Result := Result + ' of ' + GetTypeSpelling(Types[DataType].BaseType);
+                                     Result := 'file';
+                  if Types[Types[DataType].BaseType].Kind <> ANYTYPE then       // related to FILE declarations
+                    if LongDesc then Result := Result + ' of ' + GetTypeSpelling(Types[DataType].BaseType)
+                                else Result := 'F->' + GetTypeSpelling(Types[DataType].BaseType,FALSE);
                   end;  
-  ARRAYTYPE:      Result := 'array of ' + GetTypeSpelling(Types[DataType].BaseType); 
-  RECORDTYPE:     Result := 'record';
-  INTERFACETYPE:  Result := 'interface';
-  SETTYPE:        Result := 'set of ' + GetTypeSpelling(Types[DataType].BaseType);
-  ENUMERATEDTYPE: Result := 'enumeration';
-  SUBRANGETYPE:   Result := 'subrange of ' + GetTypeSpelling(Types[DataType].BaseType); 
-  PROCEDURALTYPE: Result := 'procedural type';
+  ARRAYTYPE:      begin   // check for string ("array of char")
+                     if Types[Types[DataType].BaseType].Kind  = CHARTYPE then  if LongDesc then  Result := 'string' else Result := 'Strg'
+                     else  if LongDesc then
+                             Result := 'array of ' + GetTypeSpelling(Types[DataType].BaseType)
+                     else Result := 'a-> ' + GetTypeSpelling(Types[DataType].BaseType,FALSE);
+                  end;
+  RECORDTYPE:     if LongDesc then Result := 'record'      else Result := 'rec ';
+  CURRENCYTYPE:   if LongDesc then Result := 'currency'    else Result := 'curr';
+  INTERFACETYPE:  if LongDesc then Result := 'interface'   else Result := 'ifac';
+  SETTYPE:        if LongDesc then Result := 'set of ' + GetTypeSpelling(Types[DataType].BaseType)
+                              else Result := 's-> '+GetTypeSpelling(Types[DataType].BaseType, FALSE);
+  ENUMERATEDTYPE: if LongDesc then Result := 'enumeration' else Result := 'enum';
+  SUBRANGETYPE:   if LongDesc then Result := 'subrange of ' + GetTypeSpelling(Types[DataType].BaseType)
+                              else Result := 'SU->'+GetTypeSpelling(Types[DataType].BaseType,FALSE);
+  PROCEDURALTYPE: if LongDesc then Result := 'procedural type'  else Result := 'PTyp';
+//  SYSTEMPROCTYPE: if LongDesc then Result := 'system procedure' else Result := 'sp  ';
+//  SYSTEMFUNCTYPE: if LongDesc then Result := 'system function'  else Result := 'sF  ';
+//  PROCTYPE:       if LongDesc then Result := 'procedure'        else Result := 'PROC';
+//  FUNCTYPE:       if LongDesc then Result := 'function'         else Result := 'FUNC';
+
 else
-  Result := 'unknown type';
+  if LongDesc then Result := 'unknown type' else Result := '????';
 end; //case
 end;
 
-
-
+Function GetScopeSpelling(Scope: TScope): TString;
+begin
+    case Scope of
+       EMPTYSCOPE: Result := ' empty ';
+       GLOBAL:     Result := 'global ';
+       LOCAL:      Result := ' local ';
+    end;
+end;
 
 function Align(Size, Alignment: Integer): Integer;
 begin
@@ -628,7 +1149,7 @@ end;
 
 
 
-
+ // used for indirect procedures
 procedure SetWriteProcs(ClassInstance: Pointer; NewNoticeProc, NewWarningProc, NewErrorProc: TWriteProc);
 begin
 WriteProcsClassInstance := ClassInstance;
@@ -638,445 +1159,35 @@ WarningProc := NewWarningProc;
 ErrorProc   := NewErrorProc;
 end;
 
-
-
-
 procedure Notice(const Msg: TString);
 begin
-NoticeProc(WriteProcsClassInstance, Msg);
+Writeln(OUTPUT,Msg);
 end;
 
-
-
-
+// indirect procedure
 procedure Warning(const Msg: TString);
 begin
 WarningProc(WriteProcsClassInstance, Msg);
 end;
-
-
-
-  
-procedure Error(const Msg: TString);
+// This is left here for technical reasons (every time I
+// try to remove it, it breaks the compiler)
+procedure OldError(const Msg: TString);
 begin
 ErrorProc(WriteProcsClassInstance, Msg);
 end;
 
 
-
-
-procedure DefineStaticString(const StrValue: TString; var Addr: LongInt; FixedAddr: LongInt = -1);
-var
-  Len: Integer;  
-begin
-Len := Length(StrValue);
-
-if FixedAddr <> -1 then
-  Addr := FixedAddr
-else  
-  begin
-  if Len + 1 > MAXINITIALIZEDDATASIZE - InitializedGlobalDataSize then
-    Error('Not enough memory for static string');
-
-  Addr := InitializedGlobalDataSize;  // Relocatable
-  InitializedGlobalDataSize := InitializedGlobalDataSize + Len + 1;
-  end;
-  
-Move(StrValue[1], InitializedGlobalData[Addr], Len);
-InitializedGlobalData[Addr + Len] := 0;      // Add string termination character
-end;
-
-
-
-
-procedure DefineStaticSet(const SetValue: TByteSet; var Addr: LongInt; FixedAddr: LongInt = -1);
-var
-  i: Integer;
-  ElementPtr: ^Byte;  
-begin
-if FixedAddr <> -1 then
-  Addr := FixedAddr
-else  
-  begin
-  if MAXSETELEMENTS div 8 > MAXINITIALIZEDDATASIZE - InitializedGlobalDataSize then
-    Error('Not enough memory for static set');
-  
-  Addr := InitializedGlobalDataSize;
-  InitializedGlobalDataSize := InitializedGlobalDataSize + MAXSETELEMENTS div 8;
-  end;   
-
-for i := 0 to MAXSETELEMENTS - 1 do
-  if i in SetValue then
-    begin
-    ElementPtr := @InitializedGlobalData[Addr + i shr 3];
-    ElementPtr^ := ElementPtr^ or (1 shl (i and 7));
-    end;
-end;
-
-
-
-
 function IsString(DataType: Integer): Boolean;
-begin
-Result := (Types[DataType].Kind = ARRAYTYPE) and (Types[Types[DataType].BaseType].Kind = CHARTYPE);
-end;
-
-
-
-
-function LowBound(DataType: Integer): Integer;
-begin
-Result := 0;
-case Types[DataType].Kind of
-  INTEGERTYPE:    Result := -2147483647 - 1;
-  SMALLINTTYPE:   Result := -32768;
-  SHORTINTTYPE:   Result := -128;
-  WORDTYPE:       Result :=  0;
-  BYTETYPE:       Result :=  0;
-  CHARTYPE:       Result :=  0;
-  BOOLEANTYPE:    Result :=  0;
-  SUBRANGETYPE:   Result :=  Types[DataType].Low;
-  ENUMERATEDTYPE: Result :=  Types[DataType].Low
-else
-  Error('Ordinal type expected')
-end;// case
-end;
-                        
-
-
-
-function HighBound(DataType: Integer): Integer;
-begin
-Result := 0;
-case Types[DataType].Kind of
-  INTEGERTYPE:    Result := 2147483647;
-  SMALLINTTYPE:   Result := 32767;
-  SHORTINTTYPE:   Result := 127;
-  WORDTYPE:       Result := 65535;
-  BYTETYPE:       Result := 255;  
-  CHARTYPE:       Result := 255;
-  BOOLEANTYPE:    Result := 1;
-  SUBRANGETYPE:   Result := Types[DataType].High;
-  ENUMERATEDTYPE: Result := Types[DataType].High
-else
-  Error('Ordinal type expected')
-end;// case
-end;
-
-
-
-
-function TypeSize(DataType: Integer): Integer;
-var
-  CurSize, BaseTypeSize, FieldTypeSize: Integer;
-  NumElements, FieldOffset, i: Integer;
-begin
-Result := 0;
-case Types[DataType].Kind of
-  INTEGERTYPE:               Result := SizeOf(Integer);
-  SMALLINTTYPE:              Result := SizeOf(SmallInt);
-  SHORTINTTYPE:              Result := SizeOf(ShortInt);
-  WORDTYPE:                  Result := SizeOf(Word);
-  BYTETYPE:                  Result := SizeOf(Byte);  
-  CHARTYPE:                  Result := SizeOf(TCharacter);
-  BOOLEANTYPE:               Result := SizeOf(Boolean);
-  REALTYPE:                  Result := SizeOf(Double);
-  SINGLETYPE:                Result := SizeOf(Single);
-  POINTERTYPE:               Result := SizeOf(Pointer);
-  FILETYPE:                  Result := SizeOf(TString) + SizeOf(Integer);  // Name + Handle
-  SUBRANGETYPE:              Result := TypeSize(Types[DataType].BaseType);
-  
-  ARRAYTYPE:                 begin
-                             if Types[DataType].IsOpenArray then
-                               Error('Illegal type');
-                             
-                             NumElements := HighBound(Types[DataType].IndexType) - LowBound(Types[DataType].IndexType) + 1;
-                             BaseTypeSize := TypeSize(Types[DataType].BaseType);
-                             
-                             if (NumElements > 0) and (BaseTypeSize > HighBound(INTEGERTYPEINDEX) div NumElements) then
-                               Error('Type size is too large');
-                               
-                             Result := NumElements * BaseTypeSize;
-                             end;
-                             
-  RECORDTYPE, INTERFACETYPE: for i := 1 to Types[DataType].NumFields do
-                               begin
-                               FieldOffset := Types[DataType].Field[i]^.Offset;
-                               FieldTypeSize := TypeSize(Types[DataType].Field[i]^.DataType);
-                               
-                               if FieldTypeSize > HighBound(INTEGERTYPEINDEX) - FieldOffset then
-                                 Error('Type size is too large');
-                               
-                               CurSize := FieldOffset + FieldTypeSize;
-                               if CurSize > Result then Result := CurSize;
-                               end;
-  
-  SETTYPE:                   Result := MAXSETELEMENTS div 8;
-  ENUMERATEDTYPE:            Result := SizeOf(Byte);                
-  PROCEDURALTYPE:            Result := SizeOf(Pointer)               
-else
-  Error('Illegal type')
-end;// case
-end; 
-
-
-
-
-function GetTotalParamSize(const Signature: TSignature; IsMethod, AlwaysTreatStructuresAsReferences: Boolean): Integer;
-var
-  i: Integer;
-begin
-if (Signature.CallConv <> DEFAULTCONV) and IsMethod then
-  Error('Internal fault: Methods cannot be STDCALL/CDECL');
-  
-Result := 0;
-  
-// For a method, Self is a first (hidden) VAR parameter
-if IsMethod then
-  Result := Result + SizeOf(LongInt);
-
-// Allocate space for structured Result as a hidden VAR parameter (except STDCALL/CDECL functions returning small structures in EDX:EAX)
-with Signature do
-  if (ResultType <> 0) and (Types[ResultType].Kind in StructuredTypes) and ((CallConv = DEFAULTCONV) or (TypeSize(ResultType) > 2 * SizeOf(LongInt))) then
-    Result := Result + SizeOf(LongInt);
-  
-// Any parameter occupies 4 bytes (except structures in the C stack)
-if (Signature.CallConv <> DEFAULTCONV) and not AlwaysTreatStructuresAsReferences then
-  for i := 1 to Signature.NumParams do
-    if Signature.Param[i]^.PassMethod = VALPASSING then
-      Result := Result + Align(TypeSize(Signature.Param[i]^.DataType), SizeOf(LongInt))
-    else  
-      Result := Result + SizeOf(LongInt)
-else
-  for i := 1 to Signature.NumParams do
-    if (Signature.Param[i]^.PassMethod = VALPASSING) and (Types[Signature.Param[i]^.DataType].Kind = REALTYPE) then
-      Result := Result + SizeOf(Double)
-    else  
-      Result := Result + SizeOf(LongInt);
-       
-end; // GetTotalParamSize   
-
-
-
-
-function GetCompatibleType(LeftType, RightType: Integer): Integer;
-begin
-Result := 0;
-
-// General rule
-if LeftType = RightType then                 
-  Result := LeftType
-
-// Special cases
-// All types are compatible with their aliases
-else if Types[LeftType].AliasType <> 0 then
-  Result := GetCompatibleType(Types[LeftType].AliasType, RightType)
-else if Types[RightType].AliasType <> 0 then
-  Result := GetCompatibleType(LeftType, Types[RightType].AliasType)
-
-// Sets are compatible with other sets having a compatible base type, or with an empty set constructor
-else if (Types[LeftType].Kind = SETTYPE) and (Types[RightType].Kind = SETTYPE) then
-  begin
-  if Types[RightType].BaseType = ANYTYPEINDEX then
-    Result := LeftType
-  else if Types[LeftType].BaseType = ANYTYPEINDEX then
-    Result := RightType
-  else
-    begin  
-    GetCompatibleType(Types[LeftType].BaseType, Types[RightType].BaseType);
-    Result := LeftType;
-    end;
-  end
-  
-// Strings are compatible with any other strings
-else if IsString(LeftType) and IsString(RightType) then
-  Result := LeftType
-
-// Untyped pointers are compatible with any pointers or procedural types
-else if (Types[LeftType].Kind = POINTERTYPE) and (Types[LeftType].BaseType = ANYTYPEINDEX) and
-        (Types[RightType].Kind in [POINTERTYPE, PROCEDURALTYPE]) then
-  Result := LeftType
-else if (Types[RightType].Kind = POINTERTYPE) and (Types[RightType].BaseType = ANYTYPEINDEX) and
-        (Types[LeftType].Kind in [POINTERTYPE, PROCEDURALTYPE]) then
-  Result := RightType   
-  
-// Typed pointers are compatible with any pointers to a reference-compatible type
-else if (Types[LeftType].Kind = POINTERTYPE) and (Types[RightType].Kind = POINTERTYPE) then
-  Result := GetCompatibleRefType(Types[LeftType].BaseType, Types[RightType].BaseType)
-    
-// Procedural types are compatible if their Self pointer offsets are equal and their signatures are compatible
-else if (Types[LeftType].Kind = PROCEDURALTYPE) and (Types[RightType].Kind = PROCEDURALTYPE) and
-        (Types[LeftType].SelfPointerOffset = Types[RightType].SelfPointerOffset) then
-  begin
-  CheckSignatures(Types[LeftType].Signature, Types[RightType].Signature, 'procedural variable', FALSE);
-  Result := LeftType; 
-  end
-  
-// Subranges are compatible with their host types
-else if Types[LeftType].Kind = SUBRANGETYPE then
-  Result := GetCompatibleType(Types[LeftType].BaseType, RightType)
-else if Types[RightType].Kind = SUBRANGETYPE then
-  Result := GetCompatibleType(LeftType, Types[RightType].BaseType)
-
-// Integers
-else if (Types[LeftType].Kind in IntegerTypes) and (Types[RightType].Kind in IntegerTypes) then
-  Result := LeftType
-
-// Booleans
-else if (Types[LeftType].Kind = BOOLEANTYPE) and (Types[RightType].Kind = BOOLEANTYPE) then
-  Result := LeftType
-
-// Characters
-else if (Types[LeftType].Kind = CHARTYPE) and  (Types[RightType].Kind = CHARTYPE) then
-  Result := LeftType;
-
-if Result = 0 then
-  Error('Incompatible types: ' + GetTypeSpelling(LeftType) + ' and ' + GetTypeSpelling(RightType));  
-end;
-
-
-
-
-function GetCompatibleRefType(LeftType, RightType: Integer): Integer;
-begin
-// This function is asymmetric and implies Variable(LeftType) := Variable(RightType)
-Result := 0;
-
-// General rule
-if LeftType = RightType then                 
-  Result := RightType
-  
-// Special cases
-// All types are compatible with their aliases  
-else if Types[LeftType].AliasType <> 0 then
-  Result := GetCompatibleRefType(Types[LeftType].AliasType, RightType)
-else if Types[RightType].AliasType <> 0 then
-  Result := GetCompatibleRefType(LeftType, Types[RightType].AliasType)
-
-// Open arrays are compatible with any other arrays of the same base type
-else if (Types[LeftType].Kind = ARRAYTYPE) and (Types[RightType].Kind = ARRAYTYPE) and 
-         Types[LeftType].IsOpenArray and (Types[LeftType].BaseType = Types[RightType].BaseType) then       
-  Result := RightType
-
-// Untyped pointers are compatible with any other pointers 
-else if (Types[LeftType].Kind = POINTERTYPE) and (Types[RightType].Kind = POINTERTYPE) and
-       ((Types[LeftType].BaseType = Types[RightType].BaseType) or (Types[LeftType].BaseType = ANYTYPEINDEX)) then  
-  Result := RightType
-  
-// Untyped files are compatible with any other files 
-else if (Types[LeftType].Kind = FILETYPE) and (Types[RightType].Kind = FILETYPE) and
-        (Types[LeftType].BaseType = ANYTYPEINDEX) then  
-  Result := RightType   
-  
-// Untyped parameters are compatible with any type
-else if Types[LeftType].Kind = ANYTYPE then
-  Result := RightType;
-
-if Result = 0 then
-  Error('Incompatible types: ' + GetTypeSpelling(LeftType) + ' and ' + GetTypeSpelling(RightType));  
-end;
-
-
-
-
-procedure CheckOperator(const Tok: TToken; DataType: Integer); 
-begin
-with Types[DataType] do
-  if Kind = SUBRANGETYPE then
-    CheckOperator(Tok, BaseType)
-  else 
     begin
-    if not (Kind in OrdinalTypes) and (Kind <> REALTYPE) and (Kind <> POINTERTYPE) and (Kind <> PROCEDURALTYPE) then
-      Error('Operator ' + GetTokSpelling(Tok.Kind) + ' is not applicable to ' + GetTypeSpelling(DataType));
-     
-    if ((Kind in IntegerTypes)  and not (Tok.Kind in OperatorsForIntegers)) or
-       ((Kind = REALTYPE)       and not (Tok.Kind in OperatorsForReals)) or   
-       ((Kind = CHARTYPE)       and not (Tok.Kind in RelationOperators)) or
-       ((Kind = BOOLEANTYPE)    and not (Tok.Kind in OperatorsForBooleans)) or
-       ((Kind = POINTERTYPE)    and not (Tok.Kind in RelationOperators)) or
-       ((Kind = ENUMERATEDTYPE) and not (Tok.Kind in RelationOperators)) or
-       ((Kind = PROCEDURALTYPE) and not (Tok.Kind in RelationOperators)) 
-    then
-      Error('Operator ' + GetTokSpelling(Tok.Kind) + ' is not applicable to ' + GetTypeSpelling(DataType));
-    end;  
-end;
-
-
-
-
-procedure CheckSignatures(var Signature1, Signature2: TSignature; const Name: TString; CheckParamNames: Boolean = TRUE);
-var
-  i: Integer;
-begin
-if Signature1.NumParams <> Signature2.NumParams then
-  Error('Incompatible number of parameters in ' + Name);
-  
-if Signature1.NumDefaultParams <> Signature2.NumDefaultParams then
-  Error('Incompatible number of default parameters in ' + Name);
-  
-for i := 1 to Signature1.NumParams do
-  begin
-  if (Signature1.Param[i]^.Name <> Signature2.Param[i]^.Name) and CheckParamNames then
-    Error('Incompatible parameter names in ' + Name);
-  
-  if Signature1.Param[i]^.DataType <> Signature2.Param[i]^.DataType then
-    if not Types[Signature1.Param[i]^.DataType].IsOpenArray or not Types[Signature2.Param[i]^.DataType].IsOpenArray or
-       (Types[Signature1.Param[i]^.DataType].BaseType <> Types[Signature2.Param[i]^.DataType].BaseType) 
-    then 
-      Error('Incompatible parameter types in ' + Name + ': ' + GetTypeSpelling(Signature1.Param[i]^.DataType) + ' and ' + GetTypeSpelling(Signature2.Param[i]^.DataType));
-    
-  if Signature1.Param[i]^.PassMethod <> Signature2.Param[i]^.PassMethod then
-    Error('Incompatible CONST/VAR modifiers in ' + Name);
-
-  if Signature1.Param[i]^.Default.OrdValue <> Signature2.Param[i]^.Default.OrdValue then
-    Error('Incompatible default values in ' + Name);   
-  end; // if
-
-if Signature1.ResultType <> Signature2.ResultType then
-  Error('Incompatible result types in ' + Name + ': ' + GetTypeSpelling(Signature1.ResultType) + ' and ' + GetTypeSpelling(Signature2.ResultType));
-  
-if Signature1.CallConv <> Signature2.CallConv then
-  Error('Incompatible calling convention in ' + Name);
-
-end;
-
-
-
-
-procedure SetUnitStatus(var NewUnitStatus: TUnitStatus);
-begin 
-UnitStatus := NewUnitStatus;
-end;
-
-
-
-
-function GetUnitUnsafe(const UnitName: TString): Integer;
-var
-  UnitIndex: Integer;
-begin
-for UnitIndex := 1 to NumUnits do
-  if Units[UnitIndex].Name = UnitName then 
-    begin
-    Result := UnitIndex;
-    Exit;
+     Result := (Types[DataType].Kind = ARRAYTYPE) and (Types[Types[DataType].BaseType].Kind = CHARTYPE);
     end;
-      
-Result := 0;
-end;
 
 
 
 
-function GetUnit(const UnitName: TString): Integer;
-begin
-Result := GetUnitUnsafe(UnitName);
-if Result = 0 then
-  Error('Unknown unit ' + UnitName);
-end;
 
-
-
+// Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
+// TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be/ adjusted.
 
 function GetKeyword(const KeywordName: TString): TTokenKind;
 var
@@ -1104,140 +1215,36 @@ end;
 
 
 
-function GetIdentUnsafe(const IdentName: TString; AllowForwardReference: Boolean = FALSE; RecType: Integer = 0): Integer;
-var
-  IdentIndex: Integer;
+
+
+
+function GetIDKindSpelling(IDKind:TIdentKind): Char;
 begin
-for IdentIndex := NumIdent downto 1 do
-  with Ident[IdentIndex] do
-    if ((UnitIndex = UnitStatus.Index) or (IsExported and (UnitIndex in UnitStatus.UsedUnits))) and       
-       (AllowForwardReference or (Kind <> USERTYPE) or (Types[DataType].Kind <> FORWARDTYPE)) and
-       (ReceiverType = RecType) and  // Receiver type for methods, 0 otherwise
-       (Name = IdentName)
-    then 
-      begin
-      Result := IdentIndex;
-      Exit;
-      end;          
-     
-Result := 0;
+   Case IDkind of
+     EMPTYIDENT: Result := '?';
+     GOTOLABEL:  Result := 'L';
+     CONSTANT:   Result := 'C';
+     USERTYPE:   Result := 'U';
+     VARIABLE:   Result := 'V';
+     PROC:       Result := 'P';
+     FUNC:       Result := 'f';
+   end;
 end;
 
 
-
-
-function GetIdent(const IdentName: TString; AllowForwardReference: Boolean = FALSE; RecType: Integer = 0): Integer;
+function GetPassSpelling(Pass:TPassMethod):TString;
 begin
-Result := GetIdentUnsafe(IdentName, AllowForwardReference, RecType);
-if Result = 0 then
-  Error('Unknown identifier ' + IdentName);
-end;
-
-
-
-
-function GetFieldUnsafe(RecType: Integer; const FieldName: TString): Integer;
-var
-  FieldIndex: Integer;
-begin
-for FieldIndex := 1 to Types[RecType].NumFields do
-  if Types[RecType].Field[FieldIndex]^.Name = FieldName then
-    begin
-    Result := FieldIndex;
-    Exit;
+    Case Pass of
+       EMPTYPASSING: RESULT := ' EMPTY ';
+         VALPASSING: RESULT := ' VALUE ';
+       CONSTPASSING: RESULT := ' CONST ';
+         VARPASSING: RESULT := ' VAR ';
     end;
 
-Result := 0;
 end;
 
 
-
-
-function GetField(RecType: Integer; const FieldName: TString): Integer;
-begin
-Result := GetFieldUnsafe(RecType, FieldName);
-if Result = 0 then
-  Error('Unknown field ' + FieldName);
-end;
-
-
-
-
-function GetFieldInsideWith(var RecPointer: Integer; var RecType: Integer; var IsConst: Boolean; const FieldName: TString): Integer;
-var
-  FieldIndex, WithIndex: Integer;
-begin 
-for WithIndex := WithNesting downto 1 do
-  begin
-  RecType := WithStack[WithIndex].DataType;
-  FieldIndex := GetFieldUnsafe(RecType, FieldName);
-  
-  if FieldIndex <> 0 then
-    begin
-    RecPointer := WithStack[WithIndex].TempPointer;  
-    IsConst := WithStack[WithIndex].IsConst;
-    Result := FieldIndex;
-    Exit;
-    end;
-  end;
-
-Result := 0;  
-end;
-
-
-
-
-function GetMethodUnsafe(RecType: Integer; const MethodName: TString): Integer;
-begin
-Result := GetIdentUnsafe(MethodName, FALSE, RecType);
-end;
-
-
-
-
-function GetMethod(RecType: Integer; const MethodName: TString): Integer;
-begin
-Result := GetIdent(MethodName, FALSE, RecType);
-if (Ident[Result].Kind <> PROC) and (Ident[Result].Kind <> FUNC) then
-  Error('Method expected');
-end;
-
-
-
-
-function GetMethodInsideWith(var RecPointer: Integer; var RecType: Integer; var IsConst: Boolean; const MethodName: TString): Integer;
-var
-  MethodIndex, WithIndex: Integer;
-begin 
-for WithIndex := WithNesting downto 1 do
-  begin
-  RecType := WithStack[WithIndex].DataType;
-  MethodIndex := GetMethodUnsafe(RecType, MethodName);
-  
-  if MethodIndex <> 0 then
-    begin
-    RecPointer := WithStack[WithIndex].TempPointer;
-    IsConst := WithStack[WithIndex].IsConst;
-    Result := MethodIndex;
-    Exit;
-    end;
-  end;
-
-Result := 0;  
-end;
-
-
-
-
-function FieldOrMethodInsideWithFound(const Name: TString): Boolean;
-var
-  RecPointer: Integer;
-  RecType: Integer;
-  IsConst: Boolean;
-begin
-Result := (GetFieldInsideWith(RecPointer, RecType, IsConst, Name) <> 0) or (GetMethodInsideWith(RecPointer, RecType, IsConst, Name) <> 0);
-end;
-
+{
 Function hex( N:LongInt):string;
 VAR
    S: String;
@@ -1250,23 +1257,125 @@ VAR
       while(num>0)  DO
       begin
          rem := num mod 16;
-         S := HexString[rem+1]+S;
+         S := HexString[ rem ]+S;
          num := num DIV 16;
        end;
       Result := S;
   end;
+}
 
-Function Plural(N:LongInt; Plu:String; Sng: String):   string;
+ Function Comma(K:Longint; Sep:char =','):string;
+var
+   i:integer;
+   s: string;
+begin
+    S := Radix(K,10);
+    i := length(s)-3;
+    while i>0 do
+    begin
+        S := Copy(S,1,i) +Sep+copy(s,i+1,length(s));
+        I := I-3;
+    end;
+    Result := S;
+end;
+
+  Function Plural(N:LongInt; Plu:String; Sng: String): string;
+  Var
+     s:String;
+  Begin
+      IStr(N,S);
+      S := ' '+S+' ';
+      If n<>1 Then
+          Result:= S+ Plu
+       Else
+          Result := S + Sng;
+  End;
+
+
+// CommaP - Functon of both Comma AND Plural
+
+Function CommaP(N:LongInt; Plu:String; Sng: String; Sep:char =','): string;
 Var
-   s:String;
-Begin
-    IStr(N,S);
-    Result := ' '+S+' ';
+     S:String;
+begin
+    S := Comma(N,Sep);
+    S := ' '+S+' ';
     If n<>1 Then
-        result:= Result + Plu
+        Result := S + Plu
      Else
-        result := Result + Sng;
-End;
+        Result := S + Sng;
+end;
 
+
+
+function I2(N:Word):string;
+var
+   T1:String[3];
+ begin
+    T1 :=Radix(N,10);
+    If Length(T1)<2 then
+       T1 := '0'+T1;
+    Result := T1;
+end;
+
+Procedure NewString(Var SA: LPCSTR);
+begin
+     If StringManager = NIL then
+     begin
+         New(StringManager);
+         New(SA);
+         StringManager^.Prev := NIL;
+         StringManager^.Next := NIL;
+         StringManager^.Item := NIL;
+     end
+     else
+     begin
+        If StringManager^.Item = NIL then
+            New(SA)
+        else
+        begin
+            SA := StringManager^.Item;
+            StringManager^.Item := NIL;
+            If StringManager^.Prev<>NIL then
+                StringManager := StringManager^.Prev;
+        end;
+    end;
+end;
+
+Procedure DisposeString(Var SA: LPCSTR);
+begin
+    If StringManager^.Item <> NIl then
+    begin
+        While StringManager^.Next<>NIL do
+        begin
+            StringManager := StringManager^.Next;
+            If StringManager^.Item = NIL then
+            begin
+                StringManager^.Item := SA;
+                SA := NIL;
+                exit;
+            end;
+        end;
+        New(StringManager^.Next);
+        StringManager^.Next^.Prev := StringManager;
+        StringManager := StringManager^.Next;
+        StringManager^.Item := SA;
+        SA := NIL;
+    end
+    else
+    begin
+        StringManager^.Item := SA;
+        SA := NIL;
+    end;
+end;
 
 end.
+
+
+  
+  
+  
+a   
+  
+  
+I       ‰       ×       ø 

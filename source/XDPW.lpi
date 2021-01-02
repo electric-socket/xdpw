@@ -26,7 +26,7 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <Units Count="8">
+    <Units Count="30">
       <Unit0>
         <Filename Value="XDPW.pas"/>
         <IsPartOfProject Value="True"/>
@@ -52,14 +52,108 @@
         <IsPartOfProject Value="True"/>
       </Unit5>
       <Unit6>
-        <Filename Value="..\units\time.pas"/>
+        <Filename Value="..\units\System.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="Time"/>
       </Unit6>
       <Unit7>
-        <Filename Value="tt.pp"/>
+        <Filename Value="..\units\SysUtils.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="..\units\debug.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="patch.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Patch"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="conditional.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Conditional"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="crttest.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="CRtTest"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="exer01.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Exer01"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="err003.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="upd.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="assembler.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Assembler"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="exer07.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="compilertrace.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="CompilerTrace"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="Template_unit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Template_Unit"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="exer03.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="exer04.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="exer05.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="error.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="exer08.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="exer09.txt"/>
+        <IsPartOfProject Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="exer11.txt"/>
+        <IsPartOfProject Value="True"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="bk1.bat"/>
+        <IsPartOfProject Value="True"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="b.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="a.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="testbed.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit29>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -69,7 +163,7 @@
       <Filename Value="XDPW"/>
     </Target>
     <SearchPaths>
-      <OtherUnitFiles Value="..\units"/>
+      <OtherUnitFiles Value="..\units;.."/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

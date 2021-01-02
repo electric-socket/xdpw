@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generator: Adobe Illustrator 12.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 51448)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="492" height="389" viewBox="0 0 492 389" overflow="visible" enable-background="new 0 0 492 389" xml:space="preserve">
+<filter id="AI_GaussianBlur_4">
+	<feGaussianBlur stdDeviation="4"/>
+</filter>
+<g>
+	<g filter="url(#AI_GaussianBlur_4)">
+		<polygon fill="#636466" points="366.884,32.403 210.694,188.591 124.902,102.801 40.982,186.721 126.774,272.509 126.774,272.509     210.694,356.432 450.799,116.323   "/>
+	</g>
+	<linearGradient id="XMLID_42_" gradientUnits="userSpaceOnUse" x1="218.6826" y1="28.1475" x2="274.0625" y2="249.6676">
+		<stop offset="0" style="stop-color:#8CC63F"/>
+		<stop offset="0.1399" style="stop-color:#83BD3F"/>
+		<stop offset="0.3511" style="stop-color:#6AAC40"/>
+		<stop offset="0.6071" style="stop-color:#419440"/>
+		<stop offset="0.896" style="stop-color:#00793D"/>
+		<stop offset="1" style="stop-color:#006E3A"/>
+	</linearGradient>
+	<polygon fill="url(#XMLID_42_)" points="365.508,12.356 209.318,168.544 123.525,82.754 39.606,166.674 125.398,252.462    125.398,252.462 209.318,336.385 449.423,96.276  "/>
+	<linearGradient id="XMLID_43_" gradientUnits="userSpaceOnUse" x1="216.9521" y1="38.0352" x2="247.2941" y2="159.4035">
+		<stop offset="0" style="stop-color:#F3F8EB"/>
+		<stop offset="1" style="stop-color:#8CC63F"/>
+	</linearGradient>
+	<path fill="url(#XMLID_43_)" d="M234.057,157.79c14.626-10.932,27.803-21.647,39.055-30.926l2.092-1.72   c31.739-26.158,92.36-41.814,149.022-40.081c-19.952-19.951-49.744-49.749-58.718-58.721   C354.264,37.586,260.542,131.307,234.057,157.79z M53.595,166.674c10.418,10.418,48.933,48.933,55.462,55.458   c36.231-9.831,68.298-26.15,95.878-43.982c-1.217-1.222-69.612-69.61-81.41-81.408C112.845,107.423,64.279,155.989,53.595,166.674z   "/>
+</g>
+</svg>

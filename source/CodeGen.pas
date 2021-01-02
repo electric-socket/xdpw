@@ -1,8 +1,12 @@
-// XD Pascal - a 32-bit compiler for Windows
+// XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
+// Copyright 2020 Paul Robnson
 
-// VERSION 0.14.0
+// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
 
+// VERSION 0.15 {.0}
+
+// Generates IA-32 code
 
 {$I-}
 {$H-}
@@ -13,7 +17,7 @@ unit CodeGen;
 interface
 
 
-uses Common;
+uses  Common, Error, CompilerTrace;
 
 
 const
@@ -26,6 +30,7 @@ var
 
 procedure InitializeCodeGen;
 function GetCodeSize: LongInt;
+function GetField(RecType: Integer; const FieldName: TString): Integer;
 procedure PushConst(Value: LongInt);
 procedure PushRealConst(Value: Double);
 procedure PushRelocConst(Value: LongInt; RelocType: TRelocType);
@@ -107,7 +112,8 @@ procedure GenerateContinueEpilog(LoopNesting: Integer);
 procedure GenerateExitProlog;
 procedure GenerateExitCall;
 procedure GenerateExitEpilog;
-
+function  TypeSize(DataType: Integer): Integer;
+function  GetFieldUnsafe(RecType: Integer; const FieldName: TString): Integer;
 
 
 implementation
@@ -136,17 +142,19 @@ type
     ForLoopNesting: Integer;
   end;  
   
-  TBreakContinueExitCallList = record
+  TBreakContinueExitCallList = record        // Break, Continue, Exit
     NumCalls: Integer;
     Pos: array [1..MAXBREAKCALLS] of LongInt;
   end; 
    
-  TRegister = (EAX, ECX, EDX, ESI, EDI, EBP);
 
   
 var
+
+
   CodePosStack: array [0..1023] of Integer;
-  CodeSize, CodePosStackTop: Integer;
+// CodeSize noved to Common
+  CodePosStackTop: Integer;
   
   PrevCodeSizes: array [1..MAXPREVCODESIZES] of Integer;
   NumPrevCodeSizes: Integer;
@@ -158,7 +166,10 @@ var
   NumGotos: Integer;
   
   BreakCall, ContinueCall: array [1..MAXLOOPNESTING] of TBreakContinueExitCallList;
-  ExitCall: TBreakContinueExitCallList;   
+  ExitCall: TBreakContinueExitCallList;       // used for EXIT
+
+
+
 
 
 
@@ -173,7 +184,109 @@ end;
 
 
 
+function TypeSize(DataType: Integer): Integer;
+var
+  CurSize, BaseTypeSize, FieldTypeSize: Integer;
+  NumElements, FieldOffset, i: Integer;
+begin
+Result := 0;
+// These seemed to be too much like "shaped like itself,"
+// i.e. a recursive definition. So I fixed it.
 
+case Types[DataType].Kind of
+  INTEGERTYPE:               Result :=  4; // SizeOf(Integer);
+  SMALLINTTYPE:              Result :=  2; // SizeOf(SmallInt);
+  SHORTINTTYPE:              Result :=  1; // SizeOf(ShortInt);
+  INT64TYPE:                 Result := Sizeof(TInt64);
+  INT128TYPE:                Result := Sizeof(TInt128);
+  CURRENCYTYPE:              Result := SizeOf(TCurrency);
+  WORDTYPE:                  Result :=  2; // SizeOf(Word);
+  BYTETYPE:                  Result :=  1; // SizeOf(Byte);
+  CHARTYPE:                  Result :=  1; // SizeOf(TCharacter);
+  BOOLEANTYPE:               Result :=  1; // SizeOf(Boolean);
+  REALTYPE:                  Result :=  8; // SizeOf(Double);
+  SINGLETYPE:                Result :=  4; // SizeOf(Single);
+  POINTERTYPE:               Result :=  4; // SizeOf(Pointer);
+// old setting
+//  FILETYPE:                  Result := SizeOf(TString) + SizeOf(Integer);  // Name + Handle
+  FILETYPE:                  Result := SizeOf(TFilerec);
+  SUBRANGETYPE:              Result := TypeSize(Types[DataType].BaseType);
+
+  ARRAYTYPE:                 begin
+                             if Types[DataType].IsOpenArray then
+                             	begin
+                               		Fatal('Illegal type');
+                               		exit;
+                               	end;
+
+                             NumElements := HighBound(Types[DataType].IndexType) - LowBound(Types[DataType].IndexType) + 1;
+                             BaseTypeSize := TypeSize(Types[DataType].BaseType);
+
+                             if (NumElements > 0) and (BaseTypeSize > HighBound(INTEGERTYPEINDEX) div NumElements) then
+                             begin
+                               	Fatal('Type size is too large');
+                               	exit;
+                              end;
+
+                             Result := NumElements * BaseTypeSize;
+                             end;
+
+  RECORDTYPE, INTERFACETYPE: for i := 1 to Types[DataType].NumFields do
+                               begin
+                               FieldOffset := Types[DataType].Field[i]^.Offset;
+                               FieldTypeSize := TypeSize(Types[DataType].Field[i]^.DataType);
+
+                               if FieldTypeSize > HighBound(INTEGERTYPEINDEX) - FieldOffset then
+                               begin
+                                 Fatal('Type size is too large');
+                                 exit;
+                               end;
+
+                               CurSize := FieldOffset + FieldTypeSize;
+                               if CurSize > Result then Result := CurSize;
+                               end;
+
+  SETTYPE:                   Result := MAXSETELEMENTS div 8;
+  ENUMERATEDTYPE:            Result := 1;               // SizeOf(Byte);
+  METHODTYPE,
+  PROCEDURALTYPE:            Result := 4;               // SizeOf(Pointer)
+else
+	begin
+  		Fatal('Illegal type');
+  		exit;
+  	end;
+end;// case
+end;
+
+function GetFieldUnsafe(RecType: Integer; const FieldName: TString): Integer;
+var
+  FieldIndex: Integer;
+begin
+for FieldIndex := 1 to Types[RecType].NumFields do
+  if Types[RecType].Field[FieldIndex]^.Name = FieldName then
+    begin
+    Result := FieldIndex;
+    Exit;
+    end;
+
+Result := 0;
+end;
+
+function GetField(RecType: Integer; const FieldName: TString): Integer;
+begin
+Result := GetFieldUnsafe(RecType, FieldName);
+if Result = 0 then
+	begin
+  		Fatal('Unknown field ' + FieldName);
+  		exit;
+  	end
+end;
+
+
+
+// This is used to indicate no further
+// optimuizations involving removal of prior
+// instructions is possible
 function GetCodeSize: LongInt;
 begin
 Result := CodeSize;
@@ -191,14 +304,13 @@ end;
 
 
 
-
 procedure GenNew(b: Byte);
 var
   i: Integer;
 begin
 if CodeSize + MAXINSTRSIZE >= MAXCODESIZE then
-  Error('Maximum code size exceeded');
-  
+    Catastrophic('Maximum code size exceeded'); {Fatal}
+
 if NumPrevCodeSizes < MAXPREVCODESIZES then
   Inc(NumPrevCodeSizes)
 else
@@ -220,11 +332,13 @@ end;
 
 
 
-
+// Since the '386 is Little Endian, Low byte is
+// pushed before high byte
 procedure GenWord(w: Integer);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenWord('+Radix(W,10)+')');
 for i := 1 to 2 do
   begin
   Gen(Byte(w and $FF));
@@ -239,6 +353,7 @@ procedure GenWordAt(Pos: LongInt; w: Integer);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenWordAt(@'+Radix(Pos,10)+','+Radix(w,10)+')');
 for i := 0 to 1 do
   begin
   GenAt(Pos + i, Byte(w and $FF));
@@ -249,10 +364,11 @@ end;
 
 
 
-procedure GenDWord(dw: LongInt);
+procedure GenLong(dw: LongInt);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenLong');
 for i := 1 to 4 do
   begin
   Gen(Byte(dw and $FF));
@@ -263,10 +379,12 @@ end;
 
 
 
-procedure GenDWordAt(Pos: LongInt; dw: LongInt);
+
+procedure GenLongAt(Pos: LongInt; dw: LongInt);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenLongAt(@'+Radix(Pos,10)+'='+Radix(Dw,10)+')');
 for i := 0 to 3 do
   begin
   GenAt(Pos + i, Byte(dw and $FF));
@@ -275,18 +393,34 @@ for i := 0 to 3 do
 end;
 
 
+Function GetRelocSpelling(RelocType: TRelocType):String;
+begin
+   Case RelocType of
+     EMPTYRELOC:      Result := 'empty';
+     CODERELOC:       Result := 'code';
+     INITDATARELOC:   Result := 'init data';
+     UNINITDATARELOC: Result := 'uninit data';
+     IMPORTRELOC:     Result := 'import reloc';
+   end;
+end;
+
 
 
 procedure GenRelocDWord(dw: LongInt; RelocType: TRelocType);
 begin
+If (CodeGenCTrace in TraceCompiler) or (CodeCTrace in TraceCompiler) then
+     EmitGen('GenRelocWord('+Radix(dw,10)+','+GetRelocSpelling(RelocType)+')');
 Inc(NumRelocs);
 if NumRelocs > MAXRELOCS then
-  Error('Maximum number of relocations exceeded');  
+	BEGIN
+	    Fatal('Maximum number of relocations exceeded');  
+	    EXIT;
+	 END;
 Reloc[NumRelocs].RelocType := RelocType;
 Reloc[NumRelocs].Pos := CodeSize;
 Reloc[NumRelocs].Value := dw;
 
-GenDWord(dw);
+GenLong(dw);
 end;
 
 
@@ -340,9 +474,18 @@ end;
 
 
 procedure RemovePrevInstr(Depth: Integer);
+var
+    QQ : Byte;
 begin
+If CodeCTrace in TraceCompiler then
+   For QQ := 0 to Depth do
+         EmitGen('  *remove last instr*');
+
 if Depth >= NumPrevCodeSizes then
-  Error('Internal fault: previous instruction not found');
+	BEGIN
+  		Fatal('Internal fault: previous instruction not found');
+  		EXIT;
+  	END;
 
 CodeSize := PrevCodeSizes[NumPrevCodeSizes - Depth];  
 NumPrevCodeSizes := NumPrevCodeSizes - Depth - 1;
@@ -353,7 +496,9 @@ end;
 
 procedure PushConst(Value: LongInt);
 begin
-GenNew($68); GenDWord(Value);                            // push Value
+GenNew($68); GenLong(Value);                            // push Value
+If (CodeGenCTrace in TraceCompiler) or
+   (CodeCTrace in TraceCompiler) then EmitGen(' Push const ('+Radix(value,10)+')');
 end;
 
 
@@ -379,6 +524,7 @@ end;
 procedure PushRelocConst(Value: LongInt; RelocType: TRelocType);
 begin
 GenNew($68); GenRelocDWord(Value, RelocType);            // push Value  ; relocatable
+If CodeCTrace in TraceCompiler then EmitGen(' Push ('+Radix(Value,10)+','+GetRelocSpelling(RelocType)+')');
 end;
 
 
@@ -398,10 +544,13 @@ for i := 1 to NumRelocs do
     UNINITDATARELOC:  DeltaAddr := UninitDataDeltaAddr;
     IMPORTRELOC:      DeltaAddr := ImportDeltaAddr
   else 
-    Error('Internal fault: Illegal relocation type');
+  	BEGIN
+    	Fatal('Internal fault: Illegal relocation type');
+    	EXIT;
+    END;
   end;  
   
-  GenDWordAt(Reloc[i].Pos, Reloc[i].Value + DeltaAddr);
+  GenLongAt(Reloc[i].Pos, Reloc[i].Value + DeltaAddr);
   end;
 end;
 
@@ -409,7 +558,7 @@ end;
 
 
 procedure GenPushReg(Reg: TRegister);
-begin  
+begin
 case Reg of
   EAX: GenNew($50);            // push eax
   ECX: GenNew($51);            // push ecx
@@ -418,8 +567,17 @@ case Reg of
   EDI: GenNew($57);            // push edi
   EBP: GenNew($55)             // push ebp
 else
-  Error('Internal fault: Illegal register');  
+     Catastrophic('Internal fault: Illegal register'); {Fatal}
 end;
+If CodeCTrace in TraceCompiler then
+  case Reg of
+  EAX:  EmitGen(' push eax');
+  ECX:  EmitGen(' push ecx');
+  EDX:  EmitGen(' push edx');
+  ESI:  EmitGen(' push esi');
+  EDI:  EmitGen(' push edi');
+  EBP:  EmitGen(' push ebp');
+  end;
 end;  
 
 
@@ -436,6 +594,7 @@ procedure GenPopReg(Reg: TRegister);
     PrevOpCode: Byte;
     
   begin
+  If CodeGenCTrace in TraceCompiler then EmitGen('OptimizePopReg');
   Result := FALSE;
   PrevOpCode := PrevInstrByte(0, 0);
 
@@ -460,26 +619,28 @@ procedure GenPopReg(Reg: TRegister);
     begin
     RemovePrevInstr(0);                                                         // Remove: push eax
     GenNew($89); Gen($C1);                                                      // mov ecx, eax
-    Result := TRUE;
+    If CodeCTrace in TraceCompiler then EmitGen(' mov ecx, eax');
+     Result := TRUE;
     Exit;
     end
-    
-        
+
   // Optimization: (push eax) + (pop esi) -> (mov esi, eax)
   else if (Reg = ESI) and (PrevOpCode = $50) then                               // Previous: push esi        
     begin
-    RemovePrevInstr(0);                                                         // Remove: push eax
+    RemovePrevInstr(0);                                                        // Remove: push eax
 
     // Special case: (mov eax, [epb + Addr]) + (push eax) + (pop esi) -> (mov esi, [epb + Addr])
     if (PrevInstrByte(0, 0) = $8B) and (PrevInstrByte(0, 1) = $85) then         // Previous: mov eax, [epb + Addr]
       begin
       Addr := PrevInstrDWord(0, 2);
       RemovePrevInstr(0);                                                       // Remove: mov eax, [epb + Addr]
-      GenNew($8B); Gen($B5); GenDWord(Addr);                                    // mov esi, [epb + Addr]
+      GenNew($8B); Gen($B5); GenLong(Addr);                                    // mov esi, [epb + Addr]
+      If CodeCTrace in TraceCompiler then EmitGen('  mov esi, [epb + Addr] ('+Radix(addr,10)+')');
       end
     else
       begin                                       
       GenNew($89); Gen($C6);                                                    // mov esi, eax
+      If CodeCTrace in TraceCompiler then EmitGen('  mov esi, eax');
       end;
       
     Result := TRUE;
@@ -492,6 +653,7 @@ procedure GenPopReg(Reg: TRegister);
     begin
     RemovePrevInstr(0);                                                         // Remove: push esi                                       
     GenNew($89); Gen($F0);                                                      // mov eax, esi
+    If CodeCTrace in TraceCompiler then EmitGen('  mov eax, esi');
     Result := TRUE;
     Exit;
     end           
@@ -511,12 +673,15 @@ procedure GenPopReg(Reg: TRegister);
     if HasPushRegPrefix then                                                
       RemovePrevInstr(0);                                                       // Remove: push esi
        
-    GenNew($B8); GenDWord(Value);                                               // mov eax, Value
+    GenNew($B8); GenLong(Value);                                               // mov eax, Value
+    If CodeCTrace in TraceCompiler then EmitGen('  mov eax, value ('+Radix(value,10)+')');
+
     
     if HasPushRegPrefix then
       begin
       if ValueRelocIndex <> 0 then Dec(Reloc[ValueRelocIndex].Pos);             // Relocate Value if necessary                                                                               
       GenPushReg(ESI);                                                          // push esi
+      If CodeCTrace in TraceCompiler then EmitGen('  push esi');
       end;
     
     Result := TRUE;
@@ -528,7 +693,8 @@ procedure GenPopReg(Reg: TRegister);
   else if (Reg = EAX) and (PrevInstrByte(0, 0) = $FF) and (PrevInstrByte(0, 1) = $36) then    // Previous: push [esi]         
     begin 
     RemovePrevInstr(0);                                                         // Remove: push [esi]
-    GenNew($8B); Gen($06);                                                      // mov eax, [esi]      
+    GenNew($8B); Gen($06);                                                      // mov eax, [esi]
+    If CodeCTrace in TraceCompiler then EmitGen(' mov eax, [esi]');
     Result := TRUE;
     Exit;
     end
@@ -541,7 +707,8 @@ procedure GenPopReg(Reg: TRegister);
     begin 
     RemovePrevInstr(1);                                                         // Remove: push [esi + 4], mov eax, [esi] 
     GenNew($8B); Gen($06);                                                      // mov eax, [esi]
-    GenNew($8B); Gen($56); Gen($04);                                            // mov edx, [esi + 4]      
+    GenNew($8B); Gen($56); Gen($04);                                            // mov edx, [esi + 4]
+    If CodeCTrace in TraceCompiler then BEGIN EmitGen(' mov eax, [esi]'); EmitGen(' mov edx, [esi + 4]'); end;
     Result := TRUE;
     Exit;
     end
@@ -562,7 +729,8 @@ procedure GenPopReg(Reg: TRegister);
     if HasPushRegPrefix then                                                
       RemovePrevInstr(0);                                                       // Remove: push eax / push [ebp + Addr] 
     
-    GenNew($B9); GenDWord(Value);                                               // mov ecx, Value
+    GenNew($B9); GenLong(Value);                                               // mov ecx, Value
+    If CodeCTrace in TraceCompiler then  EmitGen(' mov ecx, value ('+Radix(value,10)+')');
     
     if HasPushRegPrefix then
       begin
@@ -580,7 +748,8 @@ procedure GenPopReg(Reg: TRegister);
     begin
     Value := PrevInstrDWord(0, 1);       
     RemovePrevInstr(0);                                                       // Remove: push Value                                       
-    GenNew($BE); GenDWord(Value);                                             // mov esi, Value
+    GenNew($BE); GenLong(Value);                                             // mov esi, Value
+    If CodeCTrace in TraceCompiler then  EmitGen('  mov eSI, value ('+Radix(value,10)+')');
     Result := TRUE;
     Exit;
     end
@@ -593,8 +762,9 @@ procedure GenPopReg(Reg: TRegister);
     Addr  := PrevInstrDWord(0, 1);   
     RemovePrevInstr(1);                                                       // Remove: push Value, mov eax, [Addr]
                                        
-    GenNew($BE); GenDWord(Value);                                             // mov esi, Value
-    GenNew($A1); GenDWord(Addr);                                              // mov eax, [Addr]
+    GenNew($BE); GenLong(Value);                                             // mov esi, Value
+    GenNew($A1); GenLong(Addr);                                              // mov eax, [Addr]
+    If CodeCTrace in TraceCompiler then BEGIN  EmitGen('  mov eSI, value ('+Radix(value,10)+')'); EmitGen('  mov eax, addr ('+Radix(addr,10)+')'); END;
     
     Result := TRUE;
     Exit;
@@ -608,7 +778,8 @@ procedure GenPopReg(Reg: TRegister);
     begin
     Value := PrevInstrDWord(0, 2);    
     RemovePrevInstr(1);                                                       // Remove: push esi, mov eax, [ebp + Value]
-    GenNew($8B); Gen($85); GenDWord(Value);                                   // mov eax, [ebp + Value]      
+    GenNew($8B); Gen($85); GenLong(Value);                                   // mov eax, [ebp + Value]
+    If CodeCTrace in TraceCompiler then  EmitGen('  mov eax, [ebp + value] ('+Radix(value,10)+')');
     Result := TRUE;
     Exit;
     end
@@ -619,7 +790,8 @@ procedure GenPopReg(Reg: TRegister);
   then        
     begin   
     RemovePrevInstr(0);                                                       // Remove: push dword ptr [esp]
-    GenNew($8B); Gen($34); Gen($24);                                          // mov esi, [esp]      
+    GenNew($8B); Gen($34); Gen($24);                                          // mov esi, [esp]
+    If CodeCTrace in TraceCompiler then  EmitGen('  mov esi, [esp]');
     Result := TRUE;
     Exit;
     end
@@ -629,18 +801,32 @@ procedure GenPopReg(Reg: TRegister);
 
 
 begin // GenPopReg
+If CodeGenCTrace in TraceCompiler then EmitGen('GenPopReg(pc='+Radix(CodeSize,10)+')');
 if not OptimizePopReg then
-  case Reg of
-    EAX: GenNew($58);            // pop eax
-    ECX: GenNew($59);            // pop ecx
-    EDX: GenNew($5A);            // pop edx
-    ESI: GenNew($5E);            // pop esi
-    EDI: GenNew($5F);            // pop edi
-    EBP: GenNew($5D)             // pop ebp
+  begin
+    case Reg of
+    EAX:  GenNew($58);            // pop eax
+    ECX:  GenNew($59);            // pop ecx
+    EDX:  GenNew($5A);            // pop edx
+    ESI:  GenNew($5E);            // pop esi
+    EDI:  GenNew($5F);            // pop edi
+    EBP:  GenNew($5D)             // pop ebp
   else
-    Error('Internal fault: Illegal register');  
+  	BEGIN
+	    Catastrophic('Internal fault: Illegal register'); {Fatal}
+	    EXIT;
+	END;
   end;
-
+  If CodeCTrace in TraceCompiler then
+    case Reg of
+    EAX:  EmitGen(' pop eax');
+    ECX:  EmitGen(' pop ecx');
+    EDX:  EmitGen(' pop edx');
+    ESI:  EmitGen(' pop esi');
+    EDI:  EmitGen(' pop edi');
+    EBP:  EmitGen(' pop ebp');
+    end;
+  end
 end;
 
 
@@ -651,6 +837,7 @@ procedure GenPushToFPU;
 
   function OptimizeGenPushToFPU: Boolean;
   begin
+  If CodeGenCTrace in TraceCompiler then EmitGen('OptimizeGenPushToFPU');
   Result := FALSE;
   
   // Optimization: (fstp qword ptr [esp]) + (fld qword ptr [esp]) -> (fst qword ptr [esp])
@@ -658,6 +845,7 @@ procedure GenPushToFPU;
     begin
     RemovePrevInstr(0);                                                  // Remove: fstp dword ptr [esp]
     GenNew($DD); Gen($14); Gen($24);                                     // fst qword ptr [esp]
+    If CodeCTrace in TraceCompiler then EmitGen(' fst qword ptr [esp]');
     Result := TRUE;
     end
 
@@ -668,6 +856,7 @@ procedure GenPushToFPU;
     begin
     RemovePrevInstr(1);                                                  // Remove: push [esi + 4], push [esi]
     GenNew($DD); Gen($06);                                               // fld qword ptr [esi]
+    If CodeCTrace in TraceCompiler then EmitGen(' fst qword ptr [esp]');
     RaiseStackTop(2);                                                    // sub esp, 8
     Result := TRUE;
     end;
@@ -675,7 +864,8 @@ procedure GenPushToFPU;
   end;
   
   
-begin
+begin    // GenPushToFPU
+If CodeGenCTrace in TraceCompiler then EmitGen('GenPushToFPU(pc='+Radix(CodeSize,10)+')');
 if not OptimizeGenPushToFPU then
   begin
   GenNew($DD); Gen($04); Gen($24);                                       // fld qword ptr [esp]
@@ -687,14 +877,15 @@ end;
 
 procedure GenPopFromFPU;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenPopFromFPU(pc='+Radix(CodeSize,10)+')');
 GenNew($DD); Gen($1C); Gen($24);                                         // fstp qword ptr [esp]
-end; 
-
+end;
 
 
 
 procedure PushFunctionResult(ResultType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('PushFunctionResult(pc='+Radix(CodeSize,10)+')');
 if Types[ResultType].Kind = REALTYPE then
   GenPushReg(EDX)                                                        // push edx
 else if Types[ResultType].Kind = BOOLEANTYPE then
@@ -732,6 +923,7 @@ end;
 
 procedure MoveFunctionResultFromFPUToEDXEAX(DataType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('MoveFunctionResultFromFPUToEDXEAX(pc='+Radix(CodeSize,10)+')');
 if Types[DataType].Kind = REALTYPE then
   begin
   RaiseStackTop(2);                                                        // sub esp, 8            ;  expand stack
@@ -748,7 +940,10 @@ else if Types[DataType].Kind = SINGLETYPE then
   DiscardStackTop(1);                                                      // add esp, 4            ;  shrink stack
   end 
 else
-  Error('Internal fault: Illegal type'); 
+	BEGIN
+  		Fatal('Internal fault: Illegal type'); 
+  		EXIT;
+  	END;
 end;
 
 
@@ -756,6 +951,7 @@ end;
 
 procedure MoveFunctionResultFromEDXEAXToFPU(DataType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('MoveFunctionResultFromEDXEAXToFPU(pc='+Radix(CodeSize,10)+')');
 if Types[DataType].Kind = REALTYPE then
   begin
   GenPushReg(EDX);                                                       // push edx
@@ -770,40 +966,53 @@ else if Types[DataType].Kind = SINGLETYPE then
   DiscardStackTop(1);                                                    // add esp, 4            ;  shrink stack
   end 
 else
-  Error('Internal fault: Illegal type'); 
+	BEGIN
+  		Fatal('Internal fault: Illegal type'); 
+  		EXIT
+  	END;
 end;
-
-
 
 
 procedure PushVarPtr(Addr: Integer; Scope: TScope; DeltaNesting: Byte; RelocType: TRelocType);
 const
   StaticLinkAddr = 2 * 4;
 var
-  i: Integer;  
+  i: Integer;
+
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('PushVarPtr');
 // EAX must be preserved
 
 case Scope of
-  GLOBAL:                                     // Global variable
-    PushRelocConst(Addr, RelocType);
-   
+  GLOBAL:   // Global variable
+     BEGIN
+         PushRelocConst(Addr, RelocType);
+         If CodeCTrace in TraceCompiler then
+             EmitGen('  Push Addr ('+Radix(addr,10)+',global,'+GetRelocSpelling(RelocType)+')');
+     END;
+
+
   LOCAL:
     begin
     if DeltaNesting = 0 then                  // Strictly local variable
       begin
-      GenNew($8D); Gen($B5); GenDWord(Addr);                       // lea esi, [ebp + Addr]
+      GenNew($8D); Gen($B5); GenLong(Addr);                       // lea esi, [ebp + Addr]
+      If CodeCTrace in TraceCompiler then EmitGen('  lea esi, [ebp + Addr] ('+Radix(addr,10)+',local)');
       end
     else                                      // Intermediate level variable
       begin
       GenNew($8B); Gen($75); Gen(StaticLinkAddr);                  // mov esi, [ebp + StaticLinkAddr]
+      If CodeCTrace in TraceCompiler then EmitGen('  mov esi, [ebp + StaticLinkAddr] ('+Radix(StaticLinkAddr,10)+',local)');
       for i := 1 to DeltaNesting - 1 do
         begin
         GenNew($8B); Gen($76); Gen(StaticLinkAddr);                // mov esi, [esi + StaticLinkAddr]
+        If CodeCTrace in TraceCompiler then EmitGen('  mov esi, [eSI + StaticLinkAddr] ('+Radix(StaticLinkAddr,10)+',local)');
         end;
-      GenNew($8D); Gen($B6); GenDWord(Addr);                       // lea esi, [esi + Addr]      
+      GenNew($8D); Gen($B6); GenLong(Addr);                       // lea esi, [esi + Addr]
+      If CodeCTrace in TraceCompiler then EmitGen('   lea esi, [esi + Addr] ('+Radix(Addr,10)+',local)');
       end;      
     GenPushReg(ESI);                                               // push esi
+    If CodeCTrace in TraceCompiler then EmitGen('  push esi');
     end;
     
 end; // case
@@ -820,6 +1029,7 @@ procedure DerefPtr(DataType: Integer);
     Addr, Offset: LongInt;
     AddrRelocIndex: Integer;
   begin
+  If CodeGenCTrace in TraceCompiler then EmitGen('OptimizeDerefPtr(pc='+Radix(CodeSize,10)+')');
   Result := FALSE;
   
   // Global variable loading
@@ -835,31 +1045,46 @@ procedure DerefPtr(DataType: Integer);
 
       1: if Types[DataType].Kind in UnsignedTypes then
            begin
-           GenNew($0F); Gen($B6); Gen($05);                              // movzx eax, byte ptr ...
+               GenNew($0F); Gen($B6); Gen($05);                              // movzx eax, byte ptr ...
+               If CodeCTrace in TraceCompiler then
+                   EmitGen('   movzx eax, byte ptr ',FALSE,TRUE,FALSE);
            end
          else  
            begin
            GenNew($0F); Gen($BE); Gen($05);                              // movsx eax, byte ptr ...
-           end; 
+           If CodeCTrace in TraceCompiler then
+               EmitGen('   movsx eax, byte ptr ',FALSE,TRUE,FALSE);
+           end;
            
       2: if Types[DataType].Kind in UnsignedTypes then
            begin
-           GenNew($0F); Gen($B7); Gen($05);                              // movzx eax, word ptr ...
+               GenNew($0F); Gen($B7); Gen($05);                              // movzx eax, word ptr ...
+               If CodeCTrace in TraceCompiler then
+                   EmitGen('   movsx eax, word ptr ',FALSE,TRUE,FALSE);
            end
          else  
            begin
            GenNew($0F); Gen($BF); Gen($05);                              // movsx eax, word ptr ...
-           end;      
+           If CodeCTrace in TraceCompiler then
+               EmitGen('   movsx eax, word ptr ',FALSE,TRUE,FALSE);
+           end;
          
       4: begin
-         GenNew($A1);                                                    // mov eax, dword ptr ...
+             GenNew($A1);                                                // mov eax, dword ptr ...
+             If CodeCTrace in TraceCompiler then
+                 EmitGen('    mov eax, dword ptr ',FALSE,TRUE,FALSE);
          end
 
     else
-      Error('Internal fault: Illegal designator size');
+    	 // INT64 / INT128  assignment faults here
+      		Catastrophic('Internal fault: Illegal designator size on assignment'); {Fatal}
+      		EXIT;
     end;
     
-    GenDWord(Addr);                                                      // ... [Addr]
+    GenLong(Addr);                                                      // ... [Addr]
+    If CodeCTrace in TraceCompiler then
+         EmitGen('] (dword '+Radix(addr,10)+')',FALSE,FALSE);
+
     
     // Relocate Addr if necessary
     if (AddrRelocIndex <> 0) and (TypeSize(DataType) <> 4) then
@@ -883,31 +1108,44 @@ procedure DerefPtr(DataType: Integer);
       1: if Types[DataType].Kind in UnsignedTypes then
            begin
            GenNew($0F); Gen($B6); Gen($85);                              // movzx eax, byte ptr [ebp + ...
+           If CodeCTrace in TraceCompiler then
+                EmitGen('  movzx eax, byte ptr [ebp + ',FALSE,TRUE,FALSE);
            end
          else  
            begin
            GenNew($0F); Gen($BE); Gen($85);                              // movsx eax, byte ptr [ebp + ...
+           If CodeCTrace in TraceCompiler then
+                EmitGen(' movsx eax, byte ptr [ebp + ',FALSE,TRUE,FALSE);
            end; 
            
       2: if Types[DataType].Kind in UnsignedTypes then
            begin
-           GenNew($0F); Gen($B7); Gen($85);                              // movzx eax, word ptr [ebp + ...
+           GenNew($0F); Gen($B7); Gen($85);                              // movzx eax, word ptr [ebp + ...  
+           If CodeCTrace in TraceCompiler then
+                EmitGen(' movzx eax, word ptr [ebp + ',FALSE,TRUE,FALSE);
            end
          else  
            begin
            GenNew($0F); Gen($BF); Gen($85);                              // movsx eax, word ptr [ebp + ...
-           end;      
+           If CodeCTrace in TraceCompiler then
+              EmitGen(' movsx eax, word ptr [ebp + ',FALSE,TRUE,FALSE);
+           end;
          
       4: begin
-         GenNew($8B); Gen($85);                                          // mov eax, dword ptr [ebp + ...
+             GenNew($8B); Gen($85);                                      // mov eax, dword ptr [ebp + ...
+             If CodeCTrace in TraceCompiler then
+                 EmitGen(' mov eax, dword ptr [ebp + ',FALSE,TRUE,FALSE);
          end
 
-    else
-      Error('Internal fault: Illegal designator size');
+       else  // function returning unidentified value
+           Catastrophic('Internal fault: Illegal designator size on function return value'); {Fatal}
     end;
     
-    GenDWord(Addr);                                                      // ... + Addr]
-    
+    GenLong(Addr);                                                      // ... + Addr]
+    If CodeCTrace in TraceCompiler then
+         EmitGen('] (dword '+Radix(addr,10)+')',FALSE,FALSE);
+
+
     Result := TRUE;
     Exit;
     end
@@ -926,31 +1164,46 @@ procedure DerefPtr(DataType: Integer);
       1: if Types[DataType].Kind in UnsignedTypes then
            begin
            GenNew($0F); Gen($B6); Gen($86);                              // movzx eax, byte ptr [esi + ...
+               If CodeCTrace in TraceCompiler then
+                   EmitGen(' movzx eax, byte ptr [esi + ',FALSE,TRUE,FALSE);
            end
          else  
            begin
-           GenNew($0F); Gen($BE); Gen($86);                              // movsx eax, byte ptr [esi + ...
-           end; 
+               GenNew($0F); Gen($BE); Gen($86);                              // movsx eax, byte ptr [esi + ...
+               If CodeCTrace in TraceCompiler then
+                   EmitGen(' movsx eax, byte ptr [esi + ',FALSE,TRUE,FALSE);
+           end;
            
       2: if Types[DataType].Kind in UnsignedTypes then
            begin
            GenNew($0F); Gen($B7); Gen($86);                              // movzx eax, word ptr [esi + ...
+           If CodeCTrace in TraceCompiler then
+               EmitGen(' movzx eax, word ptr [esi + ',FALSE,TRUE,FALSE);
            end
          else  
            begin
            GenNew($0F); Gen($BF); Gen($86);                              // movsx eax, word ptr [esi + ...
-           end;      
+           If CodeCTrace in TraceCompiler then
+               EmitGen(' movsx eax, word ptr [esi + ',FALSE,TRUE,FALSE);
+           end;
          
       4: begin
          GenNew($8B); Gen($86);                                          // mov eax, dword ptr [esi + ...
-         end
+         If CodeCTrace in TraceCompiler then
+             EmitGen(' mov eax, dword ptr [esi + ',FALSE,TRUE,FALSE);
+      end
 
     else
-      Error('Internal fault: Illegal designator size');
+    	begin
+      		Fatal('(3) Internal fault: Illegal designator size');
+      		exit;
+      	end;
     end;
     
-    GenDWord(Offset);                                                   // ... + Offset]
-    
+    GenLong(Offset);                                                   // ... + Offset]
+    If CodeCTrace in TraceCompiler then
+         EmitGen('] (dword '+Radix(offset,10)+')',FALSE,FALSE);
+
     Result := TRUE;
     Exit;
     end;
@@ -958,49 +1211,67 @@ procedure DerefPtr(DataType: Integer);
   end;
 
 
+
+
 begin // DerefPtr
+If CodeGenCTrace in TraceCompiler then EmitGen('DerefPtr(pc='+Radix(CodeSize,10)+')');
 GenPopReg(ESI);                                                      // pop esi
+If CodeCTrace in TraceCompiler then EmitGen('   pop esi');
+
 
 if Types[DataType].Kind = REALTYPE then             // Special case: Double
   begin
   GenNew($FF); Gen($76); Gen($04);                                       // push [esi + 4]
   GenNew($FF); Gen($36);                                                 // push [esi]
+  If CodeCTrace in TraceCompiler then
+    begin
+        EmitGen(' push [esi + 4]');
+        EmitGen(' push [esi]');
+    end
   end
-else                                                // General rule
+  else                                                // General rule
   begin                                                
   if not OptimizeDerefPtr then
     case TypeSize(DataType) of
 
       1: if Types[DataType].Kind in UnsignedTypes then
            begin
-           GenNew($0F); Gen($B6); Gen($06);                              // movzx eax, byte ptr [esi]
+              GenNew($0F); Gen($B6); Gen($06);                              // movzx eax, byte ptr [esi]
+              If CodeCTrace in TraceCompiler then EmitGen(' movzx eax, byte ptr [esi]');
            end
          else  
            begin
-           GenNew($0F); Gen($BE); Gen($06);                              // movsx eax, byte ptr [esi]
-           end; 
-           
+              GenNew($0F); Gen($BE); Gen($06);                              // movsx eax, byte ptr [esi]
+              If CodeCTrace in TraceCompiler then EmitGen(' movsx eax, byte ptr [esi]');
+           end;
+
       2: if Types[DataType].Kind in UnsignedTypes then
            begin
            GenNew($0F); Gen($B7); Gen($06);                              // movzx eax, word ptr [esi]
+           If CodeCTrace in TraceCompiler then EmitGen(' movzx eax, word ptr [esi]');
            end
          else  
            begin
            GenNew($0F); Gen($BF); Gen($06);                              // movsx eax, word ptr [esi]
+           If CodeCTrace in TraceCompiler then EmitGen(' movsx eax, word ptr [esi]');
            end;      
          
       4: begin
          GenNew($8B); Gen($06);                                          // mov eax, dword ptr [esi]
+         If CodeCTrace in TraceCompiler then EmitGen(' mov eax, dword ptr [esi]');
          end
 
     else
-      Error('Internal fault: Illegal designator size');
+    	begin
+      		Fatal('(4) Internal fault: Illegal designator size');
+      		exit;
+      	end;
     end;
 
   GenPushReg(EAX);                                                     // push eax
+  If CodeCTrace in TraceCompiler then EmitGen(' push eax');
   end;
 end;
-
 
 
 
@@ -1012,6 +1283,7 @@ procedure GetArrayElementPtr(ArrType: Integer);
     BaseAddr, IndexAddr: LongInt;
     Index: Integer;
   begin
+    If CodeGenCTrace in TraceCompiler then EmitGen('OptimizeGetArrayElementPtr(pc='+Radix(CodeSize,10)+')');
   Result := FALSE;
   
   // Global arrays
@@ -1024,9 +1296,13 @@ procedure GetArrayElementPtr(ArrType: Integer);
     
     RemovePrevInstr(1);                             // Remove: push BaseAddr, mov eax, [ebp + IndexAddr]
     
-    GenNew($BE); GenDWord(BaseAddr);                // mov esi, BaseAddr         ; suilable for relocatable addresses (instruction length is the same as for push BaseAddr)
-    GenNew($8B); Gen($85); GenDWord(IndexAddr);     // mov eax, [ebp + IndexAddr] 
-            
+    GenNew($BE); GenLong(BaseAddr);                // mov esi, BaseAddr         ; suitable for relocatable addresses (instruction length is the same as for push BaseAddr)
+    GenNew($8B); Gen($85); GenLong(IndexAddr);     // mov eax, [ebp + IndexAddr]
+    If CodeCTrace in TraceCompiler then
+      begin
+          EmitGen(' mov esi, BaseAddr ('+Radix(BaseAddr,10)+')');
+          EmitGen(' mov eax, [ebp + IndexAddr] ('+Radix(IndexAddr,10)+')');
+      end;      
     Result := TRUE;
     end
     
@@ -1038,9 +1314,14 @@ procedure GetArrayElementPtr(ArrType: Integer);
     
     RemovePrevInstr(1);                             // Remove: push BaseAddr, mov eax, Index
     
-    GenNew($BE); GenDWord(BaseAddr);                // mov esi, BaseAddr         ; suitable for relocatable addresses (instruction length is the same as for push BaseAddr)
-    GenNew($B8); GenDWord(Index);                   // mov eax, Index 
-            
+    GenNew($BE); GenLong(BaseAddr);                // mov esi, BaseAddr         ; suitable for relocatable addresses (instruction length is the same as for push BaseAddr)
+    GenNew($B8); GenLong(Index);                   // mov eax, Index 
+    If CodeCTrace in TraceCompiler then
+      begin
+          EmitGen(' mov esi, BaseAddr ('+Radix(BaseAddr,10)+')');
+          EmitGen(' mov eax, Index ('+Radix(Index,10)+')');
+      end;
+
     Result := TRUE;
     end 
     
@@ -1057,9 +1338,14 @@ procedure GetArrayElementPtr(ArrType: Integer);
     
     RemovePrevInstr(2);                             // Remove: mov eax, [ebp + BaseAddr], push eax, mov eax, [ebp + IndexAddr]
     
-    GenNew($8B); Gen($B5); GenDWord(BaseAddr);      // mov esi, [ebp + BaseAddr] 
-    GenNew($8B); Gen($85); GenDWord(IndexAddr);     // mov eax, [ebp + IndexAddr] 
-            
+    GenNew($8B); Gen($B5); GenLong(BaseAddr);      // mov esi, [ebp + BaseAddr] 
+    GenNew($8B); Gen($85); GenLong(IndexAddr);     // mov eax, [ebp + IndexAddr]
+    If CodeCTrace in TraceCompiler then
+      begin
+          EmitGen(' mov esi, [ebp + BaseAddr] ('+Radix(BaseAddr,10)+')');
+          EmitGen(' mov eax, [ebp + IndexAddr] ('+Radix(IndexAddr,10)+')');
+      end;
+
     Result := TRUE;
     end
     
@@ -1074,9 +1360,14 @@ procedure GetArrayElementPtr(ArrType: Integer);
     
     RemovePrevInstr(2);                             // Remove: mov eax, [ebp + BaseAddr], push eax, mov eax, Index
     
-    GenNew($8B); Gen($B5); GenDWord(BaseAddr);      // mov esi, [ebp + BaseAddr] 
-    GenNew($B8); GenDWord(Index);                   // mov eax, Index 
-            
+    GenNew($8B); Gen($B5); GenLong(BaseAddr);      // mov esi, [ebp + BaseAddr] 
+    GenNew($B8); GenLong(Index);                   // mov eax, Index 
+    If CodeCTrace in TraceCompiler then
+      begin
+          EmitGen(' mov esi, [ebp + BaseAddr] ('+Radix(BaseAddr,10)+')');
+          EmitGen(' mov eax, Index ('+Radix(Index,10)+')');
+      end;
+
     Result := TRUE;
     end
     
@@ -1102,11 +1393,14 @@ var
   Log2BaseTypeSize: ShortInt;
 
 
-begin
+begin  // GetArrayElementPtr
+If CodeGenCTrace in TraceCompiler then EmitGen('GetArrayElementPtr');
 GenPopReg(EAX);                                                 // pop eax           ; Array index
+If CodeCTrace in TraceCompiler then EmitGen(' pop eax');
 
 if not OptimizeGetArrayElementPtr then
   GenPopReg(ESI);                                                 // pop esi           ; Array base offset
+If CodeCTrace in TraceCompiler then EmitGen(' pop esi');
 
 BaseTypeSize := TypeSize(Types[ArrType].BaseType);
 IndexLowBound := LowBound(Types[ArrType].IndexType);
@@ -1115,7 +1409,7 @@ if IndexLowBound = 1 then
   GenNew($48)                                                      // dec eax
 else if IndexLowBound <> 0 then
   begin
-  GenNew($2D); GenDWord(IndexLowBound);                            // sub eax, IndexLowBound
+  GenNew($2D); GenLong(IndexLowBound);                            // sub eax, IndexLowBound
   end;
 
 if (BaseTypeSize <> 1) and (BaseTypeSize <> 2) and (BaseTypeSize <> 4) and (BaseTypeSize <> 8) then
@@ -1127,7 +1421,7 @@ if (BaseTypeSize <> 1) and (BaseTypeSize <> 2) and (BaseTypeSize <> 4) and (Base
     end
   else
     begin
-    GenNew($69); Gen($C0); GenDWord(BaseTypeSize);                 // imul eax, BaseTypeSize
+    GenNew($69); Gen($C0); GenLong(BaseTypeSize);                 // imul eax, BaseTypeSize
     end;  
   end; // if
 
@@ -1141,8 +1435,7 @@ case BaseTypeSize of
 end; 
  
 GenPushReg(ESI);                                                // push esi
-end;
-
+end;  // GetArrayElementPtr
 
 
 
@@ -1161,7 +1454,9 @@ procedure GetFieldPtr(Offset: Integer);
     begin
     Addr := PrevInstrDWord(0, 2);    
     RemovePrevInstr(0);                                                     // Remove: lea esi, [ebp + Addr]
-    GenNew($8D); Gen($B5); GenDWord(Addr + Offset);                         // lea esi, [ebp + Addr + Offset]
+    GenNew($8D); Gen($B5); GenLong(Addr + Offset);                         // lea esi, [ebp + Addr + Offset]
+    If CodeCTrace in TraceCompiler then
+        EmitGen(' lea esi, [ebp + Addr + Offset] ('+Radix(Addr,10)+'+'+Radix(Offset,10)+'='+Radix(Addr+Offset,10)+')');
     Result := TRUE;
     end
         
@@ -1170,7 +1465,7 @@ procedure GetFieldPtr(Offset: Integer);
     begin
     BaseTypeSizeCode := PrevInstrDWord(0, 2);    
     RemovePrevInstr(0);                                                     // Remove: lea esi, [esi + eax * BaseTypeSize]   
-    GenNew($8D); Gen($B4); Gen(BaseTypeSizeCode); GenDWord(Offset);         // lea esi, [esi + eax * BaseTypeSize + Offset]    
+    GenNew($8D); Gen($B4); Gen(BaseTypeSizeCode); GenLong(Offset);         // lea esi, [esi + eax * BaseTypeSize + Offset]    
     Result := TRUE;
     end;
  
@@ -1178,16 +1473,19 @@ procedure GetFieldPtr(Offset: Integer);
 
 
 begin // GetFieldPtr
+If CodeGenCTrace in TraceCompiler then EmitGen('GetFieldPtr(pc='+Radix(CodeSize,10)+')');
 if Offset <> 0 then
   begin
   GenPopReg(ESI);                                                 // pop esi
-  
+  If CodeCTrace in TraceCompiler then EmitGen(' pop esi');
+
   if not OptimizeGetFieldPtr then
     begin
-    GenNew($81); Gen($C6); GenDWord(Offset);                      // add esi, Offset    
-    end; 
+    GenNew($81); Gen($C6); GenLong(Offset);                      // add esi, Offset
+    end;
    
   GenPushReg(ESI);                                                // push esi
+  If CodeCTrace in TraceCompiler then EmitGen(' push esi');
   end;  
 end;
 
@@ -1196,13 +1494,21 @@ end;
 
 procedure GetCharAsTempString(Depth: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GetCharAsTempString(pc='+Radix(CodeSize,10)+')');
 if (Depth <> 0) and (Depth <> SizeOf(LongInt)) then
-  Error('Internal fault: Illegal depth');
+	begin
+  		Fatal('Internal fault: Illegal depth');
+  		exit;
+  	end;
   
 GenPopReg(ESI);                                                   // pop esi                  ; Temporary string address
+If CodeCTrace in TraceCompiler then EmitGen(' pop esi');
 
 if Depth = SizeOf(LongInt) then
+begin
   GenPopReg(ECX);                                                 // pop ecx                  ; Some other string address
+  If CodeCTrace in TraceCompiler then EmitGen(' pop ecx ; Some other string address');
+end;
   
 GenPopReg(EAX);                                                   // pop eax                  ; Character
 GenNew($88); Gen($06);                                            // mov byte ptr [esi], al
@@ -1218,6 +1524,7 @@ end;
 
 procedure SaveStackTopToEAX;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('SaveStackTopToEAX(pc='+Radix(CodeSize,10)+')');
 GenPopReg(EAX);                                                    // pop eax
 end;
 
@@ -1226,6 +1533,7 @@ end;
 
 procedure RestoreStackTopFromEAX;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('RestoreStackTopFromEAX(pc='+Radix(CodeSize,10)+')');
 GenPushReg(EAX);                                                   // push eax
 end;
 
@@ -1234,6 +1542,7 @@ end;
 
 procedure SaveStackTopToEDX;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('SaveStackTopToEDX(pc='+Radix(CodeSize,10)+')');
 GenPopReg(EDX);                                                    // pop edx
 end;
 
@@ -1242,6 +1551,7 @@ end;
 
 procedure RestoreStackTopFromEDX;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('RestoreStackTopFromEDX(pc='+Radix(CodeSize,10)+')');
 GenPushReg(EDX);                                                   // push edx
 end;
 
@@ -1250,7 +1560,9 @@ end;
 
 procedure RaiseStackTop(NumItems: Byte);
 begin
-GenNew($81); Gen($EC); GenDWord(SizeOf(LongInt) * NumItems);       // sub esp, 4 * NumItems
+If CodeGenCTrace in TraceCompiler then EmitGen('RaiseStackTop');
+GenNew($81); Gen($EC); GenLong(SizeOf(LongInt) * NumItems);       // sub esp, 4 * NumItems
+If CodeCTrace in TraceCompiler then EmitGen(' sub esp, 4*'+Radix(Numitems,10)+' ('+Radix(Numitems*4,10)+')');
 end;
 
 
@@ -1263,6 +1575,7 @@ procedure DiscardStackTop(NumItems: Byte);
   var
     Value: LongInt;
   begin
+  If CodeGenCTrace in TraceCompiler then EmitGen('OptimizeDiscardStackTop(pc='+Radix(CodeSize,10)+')');
   Result := FALSE;
   
   // Optimization: (push Reg) + (add esp, 4 * NumItems) -> (add esp, 4 * (NumItems - 1))
@@ -1272,7 +1585,8 @@ procedure DiscardStackTop(NumItems: Byte);
     
     if NumItems > 1 then
       begin
-      GenNew($81); Gen($C4); GenDWord(SizeOf(LongInt) * (NumItems - 1));                // add esp, 4 * (NumItems - 1)
+      GenNew($81); Gen($C4); GenLong(SizeOf(LongInt) * (NumItems - 1));                // add esp, 4 * (NumItems - 1)
+      If CodeCTrace in TraceCompiler then EmitGen(' add esp, 4*'+Radix(Numitems-1,10)+' ('+Radix((Numitems-1)*4,10)+')');
       end;
       
     Result := TRUE;
@@ -1286,7 +1600,7 @@ procedure DiscardStackTop(NumItems: Byte);
 
     if SizeOf(LongInt) * NumItems <> Value then
       begin      
-      GenNew($81); Gen($C4); GenDWord(SizeOf(LongInt) * NumItems - Value);              // add esp, 4 * NumItems - Value
+      GenNew($81); Gen($C4); GenLong(SizeOf(LongInt) * NumItems - Value);              // add esp, 4 * NumItems - Value
       end;
       
     Result := TRUE;        
@@ -1295,9 +1609,10 @@ procedure DiscardStackTop(NumItems: Byte);
 
 
 begin  // DiscardStackTop
+If CodeGenCTrace in TraceCompiler then EmitGen('DiscardStackTop(pc='+Radix(CodeSize,10)+')');
 if not OptimizeDiscardStackTop then
   begin
-  GenNew($81); Gen($C4); GenDWord(SizeOf(LongInt) * NumItems);                          // add esp, 4 * NumItems
+  GenNew($81); Gen($C4); GenLong(SizeOf(LongInt) * NumItems);                          // add esp, 4 * NumItems
   end
 end;
 
@@ -1306,7 +1621,9 @@ end;
 
 procedure DiscardStackTopAt(Pos: LongInt; NumItems: Byte);
 begin
-GenAt(Pos, $81); GenAt(Pos + 1, $C4); GenDWordAt(Pos + 2, SizeOf(LongInt) * NumItems);  // add esp, 4 * NumItems
+If CodeGenCTrace in TraceCompiler then EmitGen('DiscardStackTopAt(@'+Radix(Pos,10)+')');
+GenAt(Pos, $81); GenAt(Pos + 1, $C4); GenLongAt(Pos + 2, SizeOf(LongInt) * NumItems);  // add esp, 4 * NumItems
+If CodeCTrace in TraceCompiler then EmitGen('@:'+Radix(Pos,10)+' add esp, 4 * NumItems ('+Radix(NumItems,10)+')');
 end;
 
 
@@ -1314,7 +1631,9 @@ end;
 
 procedure DuplicateStackTop;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('DuplicateStackTop(pc='+Radix(CodeSize,10)+')');
 GenNew($FF); Gen($34); Gen($24);                                                        // push dword ptr [esp]
+If CodeCTrace in TraceCompiler then EmitGen('  push dword ptr [esp]');
 end;
 
 
@@ -1340,6 +1659,7 @@ end;
 
 procedure GenerateIncDec(proc: TPredefProc; Size: Byte; BaseTypeSize: Integer = 0);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateIncDec(pc='+Radix(CodeSize,10)+')');
 GenPopReg(ESI);                                                       // pop esi
 
 if BaseTypeSize <> 0 then                // Special case: typed pointer
@@ -1351,7 +1671,7 @@ if BaseTypeSize <> 0 then                // Special case: typed pointer
     DECPROC: Gen($2E);                                                  // sub ... [esi], ...
   end;
   
-  GenDWord(BaseTypeSize);                                               // ... BaseTypeSize
+  GenLong(BaseTypeSize);                                               // ... BaseTypeSize
   end
 else                                     // General rule
   begin  
@@ -1379,6 +1699,8 @@ end;
 
 procedure GenerateRound(TruncMode: Boolean);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateRound(pc='+Radix(CodeSize,10)+')');
+
 GenPushToFPU;                                                                  // fld qword ptr [esp]  ;  st = operand
 DiscardStackTop(1);                                                            // add esp, 4           ;  shrink stack
 
@@ -1403,6 +1725,7 @@ end;// GenerateRound
 
 procedure GenerateDoubleFromInteger(Depth: Byte);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateDoubleFromInteger(pc='+Radix(CodeSize,10)+')');
 if Depth = 0 then
   begin
   GenNew($DB); Gen($04); Gen($24);                                         // fild dword ptr [esp]  ;  st := double(operand)
@@ -1418,7 +1741,10 @@ else if Depth = SizeOf(Double) then
   GenPopFromFPU;                                                           // fstp qword ptr [esp]          ;  [esp] := operand2;  pop
   end
 else
-  Error('Internal fault: Illegal stack depth');  
+	begin
+  		Fatal('Internal fault: Illegal stack depth');  
+  		exit;
+  	end;
 end;// GenerateDoubleFromInteger
 
 
@@ -1426,6 +1752,7 @@ end;// GenerateDoubleFromInteger
 
 procedure GenerateDoubleFromSingle;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateDoubleFromSingle(pc='+Radix(CodeSize,10)+')');
 GenNew($D9); Gen($04); Gen($24);                                         // fld dword ptr [esp]   ;  st := double(operand)
 RaiseStackTop(1);                                                        // sub esp, 4            ;  expand stack
 GenPopFromFPU;                                                           // fstp qword ptr [esp]  ;  [esp] := st;  pop
@@ -1436,6 +1763,7 @@ end; // GenerateDoubleFromSingle
 
 procedure GenerateSingleFromDouble;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateSingleFromDouble(pc='+Radix(CodeSize,10)+')');
 GenPushToFPU;                                                            // fld qword ptr [esp]   ;  st := operand
 DiscardStackTop(1);                                                      // add esp, 4            ;  shrink stack
 GenNew($D9); Gen($1C); Gen($24);                                         // fstp dword ptr [esp]  ;  [esp] := single(st);  pop
@@ -1446,6 +1774,7 @@ end; // GenerateDoubleFromSingle
 
 procedure GenerateMathFunction(func: TPredefProc; ResultType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateMathFunction(pc='+Radix(CodeSize,10)+')');
 if Types[ResultType].Kind = REALTYPE then       // Real type
   begin
   GenPushToFPU;                                                            // fld qword ptr [esp]  ;  st = operand
@@ -1524,6 +1853,7 @@ end;// GenerateMathFunction
 
 procedure GenerateUnaryOperator(op: TTokenKind; ResultType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateUnaryOperator(pc='+Radix(CodeSize,10)+')');
 if Types[ResultType].Kind = REALTYPE then     // Real type
   begin
   if op = MINUSTOK then
@@ -1562,6 +1892,7 @@ end;
 
 procedure GenerateBinaryOperator(op: TTokenKind; ResultType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateBimaryOperator(pc='+Radix(CodeSize,10)+')');
 if Types[ResultType].Kind = REALTYPE then     // Real type
   begin
   GenPushToFPU;                                                            // fld qword ptr [esp]  ;  st = operand2
@@ -1674,13 +2005,14 @@ procedure GenerateRelation(rel: TTokenKind; ValType: Integer);
     begin
     Value := PrevInstrDWord(0, 1);
     RemovePrevInstr(0);                                           // Remove: mov ecx, Value
-    GenNew($3D); GenDWord(Value);                                 // cmp eax, Value
+    GenNew($3D); GenLong(Value);                                 // cmp eax, Value
     Result := TRUE;
     end;
   end;
 
 
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateRelation(pc='+Radix(CodeSize,10)+')');
 if Types[ValType].Kind = REALTYPE then        // Real type
   begin
   GenPushToFPU;                                                            // fld dword ptr [esp]  ;  st = operand2
@@ -1690,7 +2022,7 @@ if Types[ValType].Kind = REALTYPE then        // Real type
   GenNew($DE); Gen($D9);                                                   // fcompp               ;  test st - st(1)
   GenNew($DF); Gen($E0);                                                   // fnstsw ax
   GenNew($9E);                                                             // sahf  
-  GenNew($B8); GenDWord(1);                                                // mov eax, 1           ;  TRUE
+  GenNew($B8); GenLong(1);                                                // mov eax, 1           ;  TRUE
 
   case rel of
     EQTOK: GenNew($74);                                                    // je  ...
@@ -1709,7 +2041,7 @@ else                                          // Ordinal types
     begin                                                            
     GenNew($39); Gen($C8);                                                 // cmp eax, ecx
     end;   
-  GenNew($B8); GenDWord(1);                                                // mov eax, 1           ;  TRUE
+  GenNew($B8); GenLong(1);                                                // mov eax, 1           ;  TRUE
   
   case rel of
     EQTOK: GenNew($74);                                                    // je  ...
@@ -1790,10 +2122,13 @@ procedure GenerateAssignment(DesignatorType: Integer);
          GenNew($66); Gen($C7); Gen($06); GenWord(Word(Value));           // mov word ptr [esi], Value
          end;
       4: begin
-         GenNew($C7); Gen($06); GenDWord(Value);                          // mov dword ptr [esi], Value
+         GenNew($C7); Gen($06); GenLong(Value);                          // mov dword ptr [esi], Value
          end
       else
-        Error('Internal fault: Illegal designator size');
+      	begin
+        	Fatal('(5) Internal fault: Illegal designator size');
+        	exit;
+        end;
       end; // case
     
     Result := TRUE;
@@ -1802,8 +2137,15 @@ procedure GenerateAssignment(DesignatorType: Integer);
   end;
   
 
-begin
-if Types[DesignatorType].Kind = REALTYPE then            // Special case: 64-bit real type
+begin  // GenerateAssignment
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateAssignment('+Radix(DesignatorType,10)+')');
+if  Types[DesignatorType].Kind = INT64TYPE then
+    FATAL('Int64 Compile, Sz='+Radix(TypeSize(DesignatorType),10))
+else if   Types[DesignatorType].Kind = INT128TYPE then
+    FATAL('Int128 Compile, Sz='+Radix(TypeSize(DesignatorType),10))
+else if   Types[DesignatorType].Kind = CURRENCYTYPE then
+    FATAL('Currency Compile, Sz='+Radix(TypeSize(DesignatorType),10))
+else if Types[DesignatorType].Kind = REALTYPE then            // Special case: 64-bit real type
   begin
   if not OptimizeGenerateRealAssignment then
     begin
@@ -1832,7 +2174,10 @@ else                                                     // General rule: 8, 16,
          GenNew($89); Gen($06);                                                // mov [esi], eax
          end
     else
-      Error('Internal fault: Illegal designator size');
+    	begin  // This is where INT64, INT128 faults
+      		Fatal('(6) Internal fault: Illegal designator size');
+      		exit;
+      	end;
     end; // case
     end;  
   end;
@@ -1874,10 +2219,13 @@ procedure GenerateForAssignmentAndNumberOfIterations(CounterType: Integer; Down:
            GenNew($66); Gen($C7); Gen($06); GenWord(Word(InitialValue));    // mov word ptr [esi], InitialValue
            end;
         4: begin
-           GenNew($C7); Gen($06); GenDWord(InitialValue);                   // mov dword ptr [esi], InitialValue
+           GenNew($C7); Gen($06); GenLong(InitialValue);                   // mov dword ptr [esi], InitialValue
            end
         else
-          Error('Internal fault: Illegal designator size');
+        	begin
+          		Fatal('(7) Internal fault: Illegal designator size');
+          		exit;
+          	end;
         end; // case
       
       // Number of iterations
@@ -1893,6 +2241,7 @@ procedure GenerateForAssignmentAndNumberOfIterations(CounterType: Integer; Down:
   
 
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForAssignmentAndNumberOfIterations(pc='+Radix(CodeSize,10)+')');
 if not OptimizeGenerateForAssignmentAndNumberOfIterations then
   begin
   GenPopReg(EAX);                                                 // pop eax       ; final value
@@ -1910,7 +2259,10 @@ if not OptimizeGenerateForAssignmentAndNumberOfIterations then
        GenNew($89); Gen($0E);                                     // mov [esi], ecx
        end
   else
-    Error('Internal fault: Illegal designator size');
+  	begin
+    	Fatal('(8) Internal fault: Illegal designator size');
+    	exit;
+    end;
   end; // case
 
   // Number of iterations
@@ -1934,6 +2286,7 @@ end;
 
 procedure GenerateStructuredAssignment(DesignatorType: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateStructuredAssignment(pc='+Radix(CodeSize,10)+')');
 // ECX should be preserved
 
 GenPopReg(ESI);                                                            // pop esi      ; source address
@@ -1941,7 +2294,7 @@ GenPopReg(EDI);                                                            // po
 
 // Copy source to destination
 GenPushReg(ECX);                                                           // push ecx
-GenNew($B9); GenDWord(TypeSize(DesignatorType));                           // mov ecx, TypeSize(DesignatorType)
+GenNew($B9); GenLong(TypeSize(DesignatorType));                           // mov ecx, TypeSize(DesignatorType)
 GenNew($FC);                                                               // cld          ; increment esi, edi after each step
 GenNew($F3); Gen($A4);                                                     // rep movsb
 GenPopReg(ECX);                                                            // pop ecx
@@ -1952,15 +2305,16 @@ end;
 
 procedure GenerateInterfaceFieldAssignment(Offset: Integer; PopValueFromStack: Boolean; Value: LongInt; RelocType: TRelocType);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateInterfaceFieldAssignment(pc='+Radix(CodeSize,10)+')');
 if PopValueFromStack then
   begin
   GenPopReg(ESI);                                                               // pop esi
-  GenNew($89); Gen($B5); GenDWord(Offset);                                      // mov dword ptr [ebp + Offset], esi
+  GenNew($89); Gen($B5); GenLong(Offset);                                      // mov dword ptr [ebp + Offset], esi
   GenPushReg(ESI);                                                              // push esi
   end
 else
   begin
-  GenNew($C7); Gen($85); GenDWord(Offset); GenRelocDWord(Value, RelocType);     // mov dword ptr [ebp + Offset], Value
+  GenNew($C7); Gen($85); GenLong(Offset); GenRelocDWord(Value, RelocType);     // mov dword ptr [ebp + Offset], Value
   end;  
 end;
 
@@ -1969,6 +2323,7 @@ end;
 
 procedure InitializeCStack;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('InitializeCStack(pc='+Radix(CodeSize,10)+')');
 GenNew($89); Gen($E1);                                                          // mov ecx, esp
 end;
 
@@ -1980,13 +2335,14 @@ var
   ActualSize: Integer;
   
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('PushToCStack(pc='+Radix(CodeSize,10)+')');
 if PushByValue and (Types[DataType].Kind in StructuredTypes) then
   begin  
   ActualSize := Align(TypeSize(DataType), SizeOf(LongInt));
   
   // Copy structure to the C stack
   RaiseStackTop(ActualSize div SizeOf(LongInt));                                // sub esp, ActualSize
-  GenNew($8B); Gen($B1); GenDWord(SourceStackDepth);                            // mov esi, [ecx + SourceStackDepth] 
+  GenNew($8B); Gen($B1); GenLong(SourceStackDepth);                            // mov esi, [ecx + SourceStackDepth] 
   GenNew($89); Gen($E7);                                                        // mov edi, esp
   GenPushReg(EDI);                                                              // push edi                       ; destination address
   GenPushReg(ESI);                                                              // push esi                       ; source address
@@ -1995,12 +2351,12 @@ if PushByValue and (Types[DataType].Kind in StructuredTypes) then
   end
 else if PushByValue and (Types[DataType].Kind = REALTYPE) then
   begin
-  GenNew($FF); Gen($B1); GenDWord(SourceStackDepth + SizeOf(LongInt));          // push [ecx + SourceStackDepth + 4]
-  GenNew($FF); Gen($B1); GenDWord(SourceStackDepth);                            // push [ecx + SourceStackDepth]  
+  GenNew($FF); Gen($B1); GenLong(SourceStackDepth + SizeOf(LongInt));          // push [ecx + SourceStackDepth + 4]
+  GenNew($FF); Gen($B1); GenLong(SourceStackDepth);                            // push [ecx + SourceStackDepth]  
   end
 else  
   begin 
-  GenNew($FF); Gen($B1); GenDWord(SourceStackDepth);                            // push [ecx + SourceStackDepth]
+  GenNew($FF); Gen($B1); GenLong(SourceStackDepth);                            // push [ecx + SourceStackDepth]
   end; 
 end;
 
@@ -2009,20 +2365,24 @@ end;
 
 procedure ConvertSmallStructureToPointer(Addr: LongInt; Size: LongInt);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('ConvertSmallStructureToPointer(pc='+Radix(CodeSize,10)+')');
 // Converts a small structure in EDX:EAX into a pointer in EAX
 if Size <= SizeOf(LongInt) then
   begin
-  GenNew($89); Gen($85); GenDWord(Addr);                                        // mov [ebp + Addr], eax
+  GenNew($89); Gen($85); GenLong(Addr);                                        // mov [ebp + Addr], eax
   end
 else if Size <= 2 * SizeOf(LongInt) then
   begin
-  GenNew($89); Gen($85); GenDWord(Addr);                                        // mov [ebp + Addr], eax
-  GenNew($89); Gen($95); GenDWord(Addr + SizeOf(LongInt));                      // mov [ebp + Addr + 4], edx  
+  GenNew($89); Gen($85); GenLong(Addr);                                        // mov [ebp + Addr], eax
+  GenNew($89); Gen($95); GenLong(Addr + SizeOf(LongInt));                      // mov [ebp + Addr + 4], edx  
   end
 else
-  Error('Internal fault: Structure is too large to return in EDX:EAX');
+	begin
+  		Fatal('Internal fault: Structure is too large to return in EDX:EAX');
+  		exit;
+  	end;
   
-GenNew($8D); Gen($85); GenDWord(Addr);                                          // lea eax, [ebp + Addr]  
+GenNew($8D); Gen($85); GenLong(Addr);                                          // lea eax, [ebp + Addr]  
 end;
 
 
@@ -2030,6 +2390,7 @@ end;
 
 procedure ConvertPointerToSmallStructure(Size: LongInt);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('ConvertPointerToSmallStructure(pc='+Radix(CodeSize,10)+')');
 // Converts a pointer in EAX into a small structure in EDX:EAX 
 if Size <= SizeOf(LongInt) then
   begin
@@ -2041,7 +2402,10 @@ else if Size <= 2 * SizeOf(LongInt) then
   GenNew($8B); Gen($00);                                                        // mov eax, [eax]  
   end
 else
-  Error('Internal fault: Structure is too large to return in EDX:EAX');
+	begin
+  		Fatal('Internal fault: Structure is too large to return in EDX:EAX');
+  		exit;
+  	end;
 end;
  
 
@@ -2049,6 +2413,7 @@ end;
 
 procedure GenerateImportFuncStub(EntryPoint: LongInt);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateImportFuncStub(pc='+Radix(CodeSize,10)+')');
 GenNew($FF); Gen($25); GenRelocDWord(EntryPoint, IMPORTRELOC);                           // jmp ds:EntryPoint  ; relocatable
 end;
 
@@ -2062,8 +2427,18 @@ var
   CodePos: Integer;
   i: Integer;
 begin
-if (CallerNesting < 0) or (CalleeNesting < 1) or (CallerNesting - CalleeNesting < -1) then
-  Error('Internal fault: Illegal nesting level');
+If CodeGenCTrace in TraceCompiler then
+  EmitGen('GenerateCall(pc='+Radix(CodeSize,10)+
+          ', ept='+Radix(EntryPoint,10)+
+          ', crn='+Radix(CallerNesting,10)+
+          ', cln='+Radix(CalleeNesting,10)+')');
+
+if	(CallerNesting < 0) or (CalleeNesting < 1) or 
+	(CallerNesting - CalleeNesting < -1) then
+		begin
+  			Catastrophic('Internal fault: Illegal nesting level');{Fatal}
+  			exit;
+  		end;
   
 if CalleeNesting > 1 then                        // If a nested routine is called, push static link as the last hidden parameter
   if CallerNesting - CalleeNesting = -1 then     // The caller and the callee's enclosing routine are at the same nesting level
@@ -2082,7 +2457,7 @@ if CalleeNesting > 1 then                        // If a nested routine is calle
 
 // Call the routine  
 CodePos := GetCodeSize;
-GenNew($E8); GenDWord(EntryPoint - (CodePos + 5));                           // call EntryPoint
+GenNew($E8); GenLong(EntryPoint - (CodePos + 5));                           // call EntryPoint  (+5 for opcode and address)
 end;
 
 
@@ -2090,7 +2465,8 @@ end;
 
 procedure GenerateIndirectCall(CallAddressDepth: Integer);
 begin
-GenNew($8B); Gen($B4); Gen($24); GenDWord(CallAddressDepth);                 // mov esi, dword ptr [esp + CallAddressDepth]
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateIndirectCall(pc='+Radix(CodeSize,10)+')');
+GenNew($8B); Gen($B4); Gen($24); GenLong(CallAddressDepth);                 // mov esi, dword ptr [esp + CallAddressDepth]
 GenNew($FF); Gen($16);                                                       // call [esi]
 end;
 
@@ -2099,6 +2475,7 @@ end;
 
 procedure GenerateReturn(TotalParamsSize, Nesting: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateReturn(pc='+Radix(CodeSize,10)+')');
 GenNew($C2);                                                                 // ret ... 
 if Nesting = 1 then
   GenWord(TotalParamsSize)                                                   // ... TotalParamsSize
@@ -2111,6 +2488,7 @@ end;
 
 procedure GenerateForwardReference;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForwardReference'+Radix(CodeSize,10)+')');
 GenNew($90);                                                     // nop   ; jump to the procedure entry point will be inserted here
 GenNew($90);                                                     // nop
 GenNew($90);                                                     // nop
@@ -2123,7 +2501,8 @@ end;
 
 procedure GenerateForwardResolution(CodePos: Integer);
 begin
-GenAt(CodePos, $E9); GenDWordAt(CodePos + 1, GetCodeSize - (CodePos + 5));      // jmp GetCodeSize
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForwardResolution'+Radix(CodePos,10)+')');
+GenAt(CodePos, $E9); GenLongAt(CodePos + 1, GetCodeSize - (CodePos + 5));      // jmp GetCodeSize
 end;
 
 
@@ -2131,7 +2510,8 @@ end;
 
 procedure GenerateForwardResolutionToDestination(CodePos, DestPos: Integer);
 begin
-GenAt(CodePos, $E9); GenDWordAt(CodePos + 1, DestPos - (CodePos + 5));          // jmp DestPos
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForwardResolutionToDestination(@'+Radix(CodePos,10)+',@'+Radix(DestPos,10)+')');
+GenAt(CodePos, $E9); GenLongAt(CodePos + 1, DestPos - (CodePos + 5));          // jmp DestPos
 end;
 
 
@@ -2161,12 +2541,19 @@ procedure GenerateIfCondition;
   
 
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateIfCondition'+Radix(CodeSize,10)+')');
 GenPopReg(EAX);                                                  // pop eax
+If CodeCTrace in TraceCompiler then EmitGen(' pop eax');
 
 if not OptimizeGenerateIfCondition then
   begin
   GenNew($85); Gen($C0);                                         // test eax, eax
   GenNew($75); Gen($05);                                         // jne +5
+  If CodeCTrace in TraceCompiler then
+  begin
+  EmitGen(' test eax, eax');
+  EmitGen(' jne +5');
+  end;
   end;
 end;
 
@@ -2175,6 +2562,7 @@ end;
 
 procedure GenerateIfProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateIfProlog'+Radix(CodeSize,10)+')');
 SaveCodePos;
 
 GenNew($90);                                                   // nop   ; jump to the IF block end will be inserted here
@@ -2191,8 +2579,9 @@ procedure GenerateElseProlog;
 var
   CodePos: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateElseProlog'+Radix(CodeSize,10)+')');
 CodePos := RestoreCodePos;
-GenAt(CodePos, $E9); GenDWordAt(CodePos + 1, GetCodeSize - (CodePos + 5) + 5);  // jmp (IF..THEN block end)
+GenAt(CodePos, $E9); GenLongAt(CodePos + 1, GetCodeSize - (CodePos + 5) + 5);  // jmp (IF..THEN block end)
 
 GenerateIfProlog;
 end;
@@ -2204,8 +2593,9 @@ procedure GenerateIfElseEpilog;
 var
   CodePos: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateIfElseEpilog'+Radix(CodeSize,10)+')');
 CodePos := RestoreCodePos;
-GenAt(CodePos, $E9); GenDWordAt(CodePos + 1, GetCodeSize - (CodePos + 5));      // jmp (IF..THEN block end)
+GenAt(CodePos, $E9); GenLongAt(CodePos + 1, GetCodeSize - (CodePos + 5));      // jmp (IF..THEN block end)
 end;
 
 
@@ -2213,8 +2603,14 @@ end;
 
 procedure GenerateCaseProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseProlog'+Radix(CodeSize,10)+')');
 GenPopReg(ECX);                                                 // pop ecx           ; CASE switch value
 GenNew($B0); Gen($00);                                          // mov al, 00h       ; initial flag mask
+If CodeCTrace in TraceCompiler then
+  begin
+  EmitGen(' pop ecx');
+  EmitGen(' mov al, 00h');
+  end;
 end;
 
 
@@ -2224,6 +2620,7 @@ procedure GenerateCaseEpilog(NumCaseStatements: Integer);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseEpilog'+Radix(CodeSize,10)+')');
 for i := 1 to NumCaseStatements do
   GenerateIfElseEpilog;
 end;
@@ -2233,7 +2630,8 @@ end;
 
 procedure GenerateCaseEqualityCheck(Value: LongInt);
 begin
-GenNew($81); Gen($F9); GenDWord(Value);                        // cmp ecx, Value
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseEqualityCheck'+Radix(CodeSize,10)+')');
+GenNew($81); Gen($F9); GenLong(Value);                        // cmp ecx, Value
 GenNew($9F);                                                   // lahf
 GenNew($0A); Gen($C4);                                         // or al, ah
 end;
@@ -2243,9 +2641,10 @@ end;
 
 procedure GenerateCaseRangeCheck(Value1, Value2: LongInt);
 begin
-GenNew($81); Gen($F9); GenDWord(Value1);                       // cmp ecx, Value1
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseRangeCheck'+Radix(CodeSize,10)+')');
+GenNew($81); Gen($F9); GenLong(Value1);                       // cmp ecx, Value1
 GenNew($7C); Gen($0A);                                         // jl +10
-GenNew($81); Gen($F9); GenDWord(Value2);                       // cmp ecx, Value2
+GenNew($81); Gen($F9); GenLong(Value2);                       // cmp ecx, Value2
 GenNew($7F); Gen($02);                                         // jg +2
 GenNew($0C); Gen($40);                                         // or al, 40h     ; set zero flag on success
 end;
@@ -2255,6 +2654,7 @@ end;
 
 procedure GenerateCaseStatementProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseStatementProlog(pc='+Radix(CodeSize,10)+')');
 GenNew($24); Gen($40);                                         // and al, 40h    ; test zero flag
 GenNew($75); Gen($05);                                         // jnz +5         ; if set, jump to the case statement
 GenerateIfProlog;
@@ -2267,6 +2667,7 @@ procedure GenerateCaseStatementEpilog;
 var
   StoredCodeSize: LongInt;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateCaseStatementEpilog(pc='+Radix(CodeSize,10)+')');
 StoredCodeSize := GetCodeSize;
 
 GenNew($90);                                                   // nop   ; jump to the CASE block end will be inserted here
@@ -2286,6 +2687,7 @@ end;
 
 procedure GenerateWhileCondition;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateWhileCondition(pc='+Radix(CodeSize,10)+')');
 GenerateIfCondition;
 end;
 
@@ -2294,6 +2696,7 @@ end;
 
 procedure GenerateWhileProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateWhileProlog(pc='+Radix(CodeSize,10)+')');
 GenerateIfProlog;
 end;
 
@@ -2304,12 +2707,13 @@ procedure GenerateWhileEpilog;
 var
   CodePos, CurPos, ReturnPos: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateWhileEpilog(pc='+Radix(CodeSize,10)+')');
 CodePos := RestoreCodePos;
-GenAt(CodePos, $E9); GenDWordAt(CodePos + 1, GetCodeSize - (CodePos + 5) + 5);  // jmp (WHILE..DO block end)
+GenAt(CodePos, $E9); GenLongAt(CodePos + 1, GetCodeSize - (CodePos + 5) + 5);  // jmp (WHILE..DO block end)
 
 ReturnPos := RestoreCodePos;
 CurPos := GetCodeSize;
-GenNew($E9); GenDWord(ReturnPos - (CurPos + 5));                                   // jmp ReturnPos
+GenNew($E9); GenLong(ReturnPos - (CurPos + 5));                                   // jmp ReturnPos
 end;
 
 
@@ -2317,6 +2721,7 @@ end;
 
 procedure GenerateRepeatCondition;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateRepeatCondition(pc='+Radix(CodeSize,10)+')');
 GenerateIfCondition;
 end;
 
@@ -2325,6 +2730,7 @@ end;
 
 procedure GenerateRepeatProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateRepeatCondition(pc='+Radix(CodeSize,10)+')');
 SaveCodePos;
 end;
 
@@ -2335,9 +2741,10 @@ procedure GenerateRepeatEpilog;
 var
   CurPos, ReturnPos: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateRepeatEpilog(pc='+Radix(CodeSize,10)+')');
 ReturnPos := RestoreCodePos;
 CurPos := GetCodeSize;
-GenNew($E9); GenDWord(ReturnPos - (CurPos + 5));               // jmp ReturnPos
+GenNew($E9); GenLong(ReturnPos - (CurPos + 5));               // jmp ReturnPos
 end;
 
 
@@ -2345,6 +2752,7 @@ end;
 
 procedure GenerateForCondition;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForCondition(pc='+Radix(CodeSize,10)+')');
 // Check remaining number of iterations
 GenNew($83); Gen($3C); Gen($24); Gen($00);                           // cmp dword ptr [esp], 0
 GenNew($7F); Gen($05);                                               // jg +5
@@ -2355,6 +2763,7 @@ end;
 
 procedure GenerateForProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForProlog(pc='+Radix(CodeSize,10)+')');
 Inc(ForLoopNesting);
 GenerateIfProlog;
 end;
@@ -2364,6 +2773,7 @@ end;
 
 procedure GenerateForEpilog(CounterType: Integer; Down: Boolean);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateForEpilog(pc='+Radix(CodeSize,10)+')');
 // Increment/decrement counter variable
 if Down then
   GenerateIncDec(DECPROC, TypeSize(CounterType))
@@ -2383,6 +2793,7 @@ end;
 
 procedure GenerateGotoProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateGotoProlog(pc='+Radix(CodeSize,10)+')');
 NumGotos := 0;
 end;
 
@@ -2391,6 +2802,7 @@ end;
 
 procedure GenerateGoto(LabelIndex: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateGoto(pc='+Radix(CodeSize,10)+')');
 Inc(NumGotos);
 Gotos[NumGotos].Pos := GetCodeSize;
 Gotos[NumGotos].LabelIndex := LabelIndex;
@@ -2414,6 +2826,7 @@ var
   CodePos: LongInt;
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateGotoEpilog(pc='+Radix(CodeSize,10)+')');
 for i := 1 to NumGotos do
   begin
   CodePos := Gotos[i].Pos;
@@ -2427,8 +2840,14 @@ end;
 
 procedure GenerateShortCircuitProlog(op: TTokenKind);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateShortCircuitProlog(pc='+Radix(CodeSize,10)+')');
 GenPopReg(EAX);                                                    // pop eax
-GenNew($85); Gen($C0);                                             // test eax, eax  
+GenNew($85); Gen($C0);                                             // test eax, eax
+If CodeCTrace in TraceCompiler then
+  begin
+  EmitGen(' pop esi');
+  EmitGen(' test eax, eax');
+  end;
 case op of
   ANDTOK: GenNew($75);                                             // jne ...
   ORTOK:  GenNew($74);                                             // je  ...
@@ -2443,9 +2862,12 @@ end;
 
 procedure GenerateShortCircuitEpilog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateShortCircuitEpilog(pc='+Radix(CodeSize,10)+')');
 GenPopReg(EAX);                                                    // pop eax
+If CodeCTrace in TraceCompiler then EmitGen(' pop eax');
 GenerateIfElseEpilog;
 GenPushReg(EAX);                                                   // push eax
+If CodeCTrace in TraceCompiler then EmitGen(' push eax');
 end;
 
 
@@ -2453,6 +2875,7 @@ end;
 
 procedure GenerateNestedProcsProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateNestedProcsProlog(pc='+Radix(CodeSize,10)+')');
 GenerateIfProlog;
 end;
 
@@ -2461,6 +2884,7 @@ end;
 
 procedure GenerateNestedProcsEpilog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateNestedProcsEpilog(pc='+Radix(CodeSize,10)+')');
 GenerateIfElseEpilog;
 end;
 
@@ -2470,6 +2894,8 @@ end;
 procedure GenerateFPUInit;
 begin
 GenNew($DB); Gen($E3);                                           // fninit
+If (CodeGenCTrace in TraceCompiler) or (CodeCTrace in TraceCompiler) then
+     EmitGen('GenerateFPUInit:  fninit');
 end;
 
 
@@ -2477,22 +2903,30 @@ end;
 
 procedure GenerateStackFrameProlog(PreserveRegs: Boolean);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateStackFrameProlog(pc='+Radix(CodeSize,10)+')');
 GenPushReg(EBP);                                                 // push ebp
 GenNew($8B); Gen($EC);                                           // mov ebp, esp
+If CodeCTrace in TraceCompiler then EmitGen('  mov ebp, esp');
 
 SaveCodePos;
 
+If CodeCTrace in TraceCompiler then EmitGen('@:'+Radix(CodeSize,10)+'; Fixup location');
 GenNew($90);                                                     // nop   ; actual stack storage size will be inserted here 
 GenNew($90);                                                     // nop
 GenNew($90);                                                     // nop
 GenNew($90);                                                     // nop
 GenNew($90);                                                     // nop
 GenNew($90);                                                     // nop
-
+If CodeCTrace in TraceCompiler then
+    BEGIN EmitGen('  nop'); EmitGen('  nop');
+          EmitGen('  nop'); EmitGen('  nop'); EmitGen('  nop'); END;
 if PreserveRegs then
   begin
   GenPushReg(ESI);                                               // push esi
   GenPushReg(EDI);                                               // push edi
+  If CodeCTrace in TraceCompiler then
+     BEGIN EmitGen('  push esi'); EmitGen('  push eDi'); END;
+
   end;
 end;
 
@@ -2503,17 +2937,21 @@ procedure GenerateStackFrameEpilog(TotalStackStorageSize: LongInt; PreserveRegs:
 var
   CodePos: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateStackFrameEpilog(pc='+Radix(CodeSize,10)+')');
 CodePos := RestoreCodePos;
-GenAt(CodePos, $81); GenAt(CodePos + 1, $EC); GenDWordAt(CodePos + 2, TotalStackStorageSize);     // sub esp, TotalStackStorageSize
+GenAt(CodePos, $81); GenAt(CodePos + 1, $EC); GenLongAt(CodePos + 2, TotalStackStorageSize);     // sub esp, TotalStackStorageSize
+If CodeCTrace in TraceCompiler then EmitGen('@:'+Radix(Codepos,10)+'   sub esp, TotalStackStorageSize ('+Radix(TotalStackStorageSize,10)+')');
 
 if PreserveRegs then
   begin
-  GenPopReg(EDI);                                                                                 // pop edi
-  GenPopReg(ESI);                                                                                 // pop esi
+  GenPopReg(EDI);                         // pop edi
+  GenPopReg(ESI);                         // pop esi
+  If CodeCTrace in TraceCompiler then   begin EmitGen(' pop edi'); EmitGen(' pop esi'); END;
   end;
 
 GenNew($8B); Gen($E5);                                                                            // mov esp, ebp
 GenPopReg(EBP);                                                                                   // pop ebp
+If CodeCTrace in TraceCompiler then   begin EmitGen(' mov esp, ebp'); EmitGen(' pop ebp'); END;
 end;
 
 
@@ -2521,6 +2959,7 @@ end;
 
 procedure GenerateBreakProlog(LoopNesting: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateBreakProlog(pc='+Radix(CodeSize,10)+')');
 BreakCall[LoopNesting].NumCalls := 0;
 end;
 
@@ -2529,6 +2968,8 @@ end;
 
 procedure GenerateBreakCall(LoopNesting: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateBreakCall(pc='+Radix(CodeSize,10)+')');
+
 Inc(BreakCall[LoopNesting].NumCalls);
 BreakCall[LoopNesting].Pos[BreakCall[LoopNesting].NumCalls] := GetCodeSize;
 
@@ -2542,6 +2983,7 @@ procedure GenerateBreakEpilog(LoopNesting: Integer);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateBreakProlog(pc='+Radix(CodeSize,10)+')');
 for i := 1 to BreakCall[LoopNesting].NumCalls do
   GenerateForwardResolution(BreakCall[LoopNesting].Pos[i]);
 end;
@@ -2551,6 +2993,7 @@ end;
 
 procedure GenerateContinueProlog(LoopNesting: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateContinueProlog(pc='+Radix(CodeSize,10)+')');
 ContinueCall[LoopNesting].NumCalls := 0;
 end;
 
@@ -2559,6 +3002,7 @@ end;
 
 procedure GenerateContinueCall(LoopNesting: Integer);
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateContinueCall(pc='+Radix(CodeSize,10)+')');
 Inc(ContinueCall[LoopNesting].NumCalls);
 ContinueCall[LoopNesting].Pos[ContinueCall[LoopNesting].NumCalls] := GetCodeSize;
 
@@ -2572,6 +3016,7 @@ procedure GenerateContinueEpilog(LoopNesting: Integer);
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateContinueEpilog(pc='+Radix(CodeSize,10)+')');
 for i := 1 to ContinueCall[LoopNesting].NumCalls do
   GenerateForwardResolution(ContinueCall[LoopNesting].Pos[i]);
 end;
@@ -2581,14 +3026,16 @@ end;
 
 procedure GenerateExitProlog;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateExitProlog(pc='+Radix(CodeSize,10)+')');
 ExitCall.NumCalls := 0;
 end;
 
 
 
 
-procedure GenerateExitCall;
+procedure GenerateExitCall;          // EXIT
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateExitCall(pc='+Radix(CodeSize,10)+')');
 DiscardStackTop(ForLoopNesting);      // Remove the remaining numbers of iterations of all nested FOR loops
 
 Inc(ExitCall.NumCalls);
@@ -2604,6 +3051,7 @@ procedure GenerateExitEpilog;
 var
   i: Integer;
 begin
+If CodeGenCTrace in TraceCompiler then EmitGen('GenerateExitEpilog(pc='+Radix(CodeSize,10)+')');
 for i := 1 to ExitCall.NumCalls do
   GenerateForwardResolution(ExitCall.Pos[i]);
 end;

@@ -1,9 +1,9 @@
 // XD Pascal for Windows (XPDW) - a 32-bit compiler
-// Copyright (c) 2020, Paul Robinson
+// Copyright 2020 Paul Robnson
 
-// Latest upgrade by Paul Robinson:  Friday, November 6, 2020
+// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
 
-// VERSION 0.14.2
+// VERSION 0.15 {.0}
 
 // Inserts code into the program in certain cases
 
@@ -35,21 +35,26 @@ unit Patch;
 
 interface
 
-uses
-  Common;
+uses   Common;
 
 Type
-    PatchState = (
-      PatchProc,      // start of a proc, func, prop or meth
-      PatchProcBegin, // first BEGIN of a Procedure, Function
+    PatchCondition = (
+       PatchProgram,  // PROGRAM statement, or not in any unit
+       PatchUnit,     // UNIT statement
+       PatchProc,      // start of a proc, func, prop or meth
+       PatchProcBegin, // first BEGIN of the Main Program, a Procedure, Function
                       // Property or method
-       PatchProcEnd,  // Matching END statement
+       PatchProcEnd,  // Matching proc END statement
+       PatchDecl,     // in a declaration area (VAR, CONST, TYPE)
        PatchIf,       // Was an IF statement
-       PatchBegin,    // a BEGIN other than at the start of a proc
-       PatchEnd,      // matching End
-       PatchFor,      // FOR loop
-       PatchWhile,    // WHILE loop
-       PatchDo,       // DO in FOR .. DO or WHILE ... DO
+       PatchThen,     // matching THEN
+       PatchBegin,    // a block other than at the start of a proc
+       PatchEnd,      // matching End of block
+       PatchRepeat,
+       PatchFor,
+       PatchWith,
+       PatchWhile,
+       PatchDo,       // DO in FOR .. DO, WITH ... DO, or WHILE ... DO
        PatchElse,     // ELSE clause
        PatchCase,     // CASE statement
        PatchCaseOf,   // OF in Case ... OF
@@ -58,14 +63,15 @@ Type
 
 VAR
 
-// ProcName is in Common ScannerState
    PrefixItem,
    SuffixItem:  string;    // code to insert
    PrefixPos,
    SuffixPos: Byte; // How many chars of each have been read
+   MakeUnitInit,   // Are we adding a fake procedure?
    PatchFlag,  // Does scanner divert to reading from
                // PrefixItem or PostFixItem?
    PatchTrap: Boolean; // Used to allow one statement
+   PatchState: PatchCondition;
 
 // How this will work: If patching is enabled, when we get to
 // a "patch event" we determine how to handle it:
@@ -85,7 +91,7 @@ VAR
 //   in prefixCode, then an " END" in postfix code. We then
 //   turn the PatchFlag on.
 // When scanner asks for another character, if patchflag is on,
-// if Prefixtem is not null AND PrefixPos <= Length(Prefix) then
+// if Prefixtem is not null AND PrefixPos <= Length(PrefixItem) then
 //     read the next character from PrefixItem
 //     Add 1 to prefixPos
 // else
@@ -93,7 +99,7 @@ VAR
 //       set PatchFlag off
 //       prefixitem = ''
 //       prefixPos=0
-//       If Postfixitem <>'' then
+//       If Suffixitem <>'' then
 //          set patchtrap on
 
 // in the parser,
@@ -104,11 +110,34 @@ VAR
 //         set PatchFlag on
 //          set PatchTrap off
 //
+//   This should allo us to encapsulate one statement,
+//   no matter how long it is
 //
 
-
+Procedure  InitUnit;
 
 implementation
+
+// we will get called when the IMPLEMENTATION
+// token is found, or when either a BEGIN statement
+// in a unit happens, or when there is no BEGIN statement,
+// only the END. statement, so we can 'HIJACK' the parser by
+// supplying it with fake tokens to tell it to comple a "made up"
+// procedure called "unitname$INIT" (notice the $) this makes
+// it a "special" procedure that user code cannot call
+
+// if the unit has a BEGIN statement outside of a procedure, we will]
+// Change it to put it into a fake procedure. If not, we create a dummy
+// fake procedure so the compiler doesn't5 barf for there being a
+// procedure declared that isn't there.
+
+Procedure  InitUnit;
+begin
+
+
+
+end;
+
 
 end.
 
