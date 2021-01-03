@@ -1,27 +1,119 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generator: Adobe Illustrator 12.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 51448)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="492" height="389" viewBox="0 0 492 389" overflow="visible" enable-background="new 0 0 492 389" xml:space="preserve">
-<filter id="AI_GaussianBlur_4">
-	<feGaussianBlur stdDeviation="4"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   width="25"
+   height="25"
+   viewBox="0 0 25 25"
+   overflow="visible"
+   enable-background="new 0 0 492 389"
+   xml:space="preserve"
+   sodipodi:docname="green_check.svg"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"><metadata
+   id="metadata38"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+   id="defs36" /><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="640"
+   inkscape:window-height="480"
+   id="namedview34"
+   showgrid="false"
+   inkscape:zoom="7.7429306"
+   inkscape:cx="29.722808"
+   inkscape:cy="8.5239046"
+   inkscape:window-x="0"
+   inkscape:window-y="0"
+   inkscape:window-maximized="0"
+   inkscape:current-layer="Layer_1" />
+<filter
+   id="AI_GaussianBlur_4">
+	<feGaussianBlur
+   stdDeviation="4"
+   id="feGaussianBlur2" />
 </filter>
-<g>
-	<g filter="url(#AI_GaussianBlur_4)">
-		<polygon fill="#636466" points="366.884,32.403 210.694,188.591 124.902,102.801 40.982,186.721 126.774,272.509 126.774,272.509     210.694,356.432 450.799,116.323   "/>
+<g
+   id="g31"
+   transform="matrix(0.0571267,0,0,0.0571267,-1.2912186,2.9114483)">
+	<g
+   filter="url(#AI_GaussianBlur_4)"
+   id="g7">
+		<polygon
+   fill="#636466"
+   points="450.799,116.323 366.884,32.403 210.694,188.591 124.902,102.801 40.982,186.721 126.774,272.509 210.694,356.432 "
+   id="polygon5" />
 	</g>
-	<linearGradient id="XMLID_42_" gradientUnits="userSpaceOnUse" x1="218.6826" y1="28.1475" x2="274.0625" y2="249.6676">
-		<stop offset="0" style="stop-color:#8CC63F"/>
-		<stop offset="0.1399" style="stop-color:#83BD3F"/>
-		<stop offset="0.3511" style="stop-color:#6AAC40"/>
-		<stop offset="0.6071" style="stop-color:#419440"/>
-		<stop offset="0.896" style="stop-color:#00793D"/>
-		<stop offset="1" style="stop-color:#006E3A"/>
+	<linearGradient
+   id="XMLID_42_"
+   gradientUnits="userSpaceOnUse"
+   x1="218.6826"
+   y1="28.147499"
+   x2="274.0625"
+   y2="249.6676">
+		<stop
+   offset="0"
+   style="stop-color:#8CC63F"
+   id="stop9" />
+		<stop
+   offset="0.1399"
+   style="stop-color:#83BD3F"
+   id="stop11" />
+		<stop
+   offset="0.3511"
+   style="stop-color:#6AAC40"
+   id="stop13" />
+		<stop
+   offset="0.6071"
+   style="stop-color:#419440"
+   id="stop15" />
+		<stop
+   offset="0.896"
+   style="stop-color:#00793D"
+   id="stop17" />
+		<stop
+   offset="1"
+   style="stop-color:#006E3A"
+   id="stop19" />
 	</linearGradient>
-	<polygon fill="url(#XMLID_42_)" points="365.508,12.356 209.318,168.544 123.525,82.754 39.606,166.674 125.398,252.462    125.398,252.462 209.318,336.385 449.423,96.276  "/>
-	<linearGradient id="XMLID_43_" gradientUnits="userSpaceOnUse" x1="216.9521" y1="38.0352" x2="247.2941" y2="159.4035">
-		<stop offset="0" style="stop-color:#F3F8EB"/>
-		<stop offset="1" style="stop-color:#8CC63F"/>
+	<polygon
+   fill="url(#XMLID_42_)"
+   points="449.423,96.276 365.508,12.356 209.318,168.544 123.525,82.754 39.606,166.674 125.398,252.462 209.318,336.385 "
+   id="polygon22"
+   style="fill:url(#XMLID_42_)" />
+	<linearGradient
+   id="XMLID_43_"
+   gradientUnits="userSpaceOnUse"
+   x1="216.9521"
+   y1="38.035198"
+   x2="247.2941"
+   y2="159.4035">
+		<stop
+   offset="0"
+   style="stop-color:#F3F8EB"
+   id="stop24" />
+		<stop
+   offset="1"
+   style="stop-color:#8CC63F"
+   id="stop26" />
 	</linearGradient>
-	<path fill="url(#XMLID_43_)" d="M234.057,157.79c14.626-10.932,27.803-21.647,39.055-30.926l2.092-1.72   c31.739-26.158,92.36-41.814,149.022-40.081c-19.952-19.951-49.744-49.749-58.718-58.721   C354.264,37.586,260.542,131.307,234.057,157.79z M53.595,166.674c10.418,10.418,48.933,48.933,55.462,55.458   c36.231-9.831,68.298-26.15,95.878-43.982c-1.217-1.222-69.612-69.61-81.41-81.408C112.845,107.423,64.279,155.989,53.595,166.674z   "/>
+	<path
+   fill="url(#XMLID_43_)"
+   d="m 234.057,157.79 c 14.626,-10.932 27.803,-21.647 39.055,-30.926 l 2.092,-1.72 C 306.943,98.986 367.564,83.33 424.226,85.063 404.274,65.112 374.482,35.314 365.508,26.342 354.264,37.586 260.542,131.307 234.057,157.79 Z m -180.462,8.884 c 10.418,10.418 48.933,48.933 55.462,55.458 36.231,-9.831 68.298,-26.15 95.878,-43.982 -1.217,-1.222 -69.612,-69.61 -81.41,-81.408 -10.68,10.681 -59.246,59.247 -69.93,69.932 z"
+   id="path29"
+   style="fill:url(#XMLID_43_)" />
 </g>
 </svg>
