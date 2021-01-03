@@ -1,21 +1,19 @@
 #XDPW - XD Pascal for Windows: A 32-bit compiler
 
 New feature for version 0.14.0
-
-    Error position: When there is an error, the compiler will report Line number and Column in the file, not just line number
-
+- Error position: When there is an error, the compiler will report Line number and Column in the file, not just line number
 New features for version 0.14.1
 
 More statistics:
 
--  For each unit, the number of lines compiled for that unit is reported
--  Total number of lines compiled is reported
--     Total number of identifiers (Procedure, Function, Const, and Var) used
--     Highest number of identifiers used
--     Total compilation time and total lines compiled per second
--     Date and time compilation began and ended reported
--     Memory usage for code and data reported in decimal and hex
--  Character misuse is flagged: 
+- For each unit, the number of lines compiled for that unit is reported
+- Total number of lines compiled is reported
+- Total number of identifiers (Procedure, Function, Const, and Var) used
+- Highest number of identifiers used
+- Total compilation time and total lines compiled per second
+- Date and time compilation began and ended reported
+- Memory usage for code and data reported in decimal and hex
+- Character misuse is flagged: 
 - Close brace } used without a preceding { will warn a person of an incorrect comment
 - Using double quote “ is flagged, warning that only \' is allowed
 - When an illegal character is discovered, its position and character value are reporteI
