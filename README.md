@@ -26,12 +26,12 @@ it never reached the linker, which creates the executable. As a result if the pr
 always called the linker to bind the user's program. Now, the linker will only be called if the error count is 
 zero. This means there is the potential for the compiler to be able to scan an entire program and report all 
 further syntax errors, if any.
-- Additional comment type (*. As was announced in the previous release, the compiler supports (* *) as well as 
+- Additional comment type (\*. As was announced in the previous release, the compiler supports (* *) as well as 
 { } block comments. Diverting from Standard Pascal, comments do not nest. e.g. a { comment } may be inside of a 
-(* comment *)  and vice-versa; and the terminators cannot be mixed, i.e. { must be closed by } while (* must be 
+(* comment \*)  and vice-versa; and the terminators cannot be mixed, i.e. { must be closed by } while (* must be 
 closed by *). (*) at the start of a comment does not close that comment.
 More Standard Pascal support. 
--The symbol pair (. may be used interchangeably with [ (open bracket) and the symbols .) may be used 
+-The symbol pair (. may be used interchangeably with \[ (open bracket) and the symbols .) may be used 
 interchangeably with ] (close bracket).
 - Better reporting of errors, e.g. if you declare a procedure or function in the INTERFACE section of a UNIT 
 (or a forward declaration in the main program or the IMPLEMENTATION section of a UNIT) and the header of the 
@@ -48,7 +48,7 @@ conditional compilation (see below).
 - Several error programs check the compiler's processing of error conditions (to try to implement recovery and continued syntax 
 checking).
 - Ampersand (&) may be used before an identifier if it might be the same as a keyword.
-- Optional dereference operator. Borrowing from the "New Stanford Pascal" mainframe Pascal compiler (on GitHub), the symbol -> may 
+- Optional dereference operator. Borrowing from the "New Stanford Pascal" mainframe Pascal compiler (on GitHub https://github.com/StanfordPascal/Pascal), the symbol -> may 
 be used interchangeably with ^ for the dereference operator.
 
 # Internals
