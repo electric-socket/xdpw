@@ -338,9 +338,12 @@ function GetTickCount: LongInt stdcall; external 'KERNEL32.DLL';
 procedure ExitProcess(uExitCode: Integer) stdcall; external 'KERNEL32.DLL';
 
 {function GetEnvironmentVariable( Name: String;
-                                 var Buffer: String;
+                                 Buffer: String;
                                  BufferSize: Integer):Integer stdcall;
-                         external 'KERNEL32.DLL'; }
+                         external 'KERNEL32.DLL';
+}
+
+Function  GetUserDefaultUILanguage: Word  stdcall;  external 'KERNEL32.DLL';
 
 // Other functions
 
@@ -378,6 +381,7 @@ function EOF(var F: file): Boolean;
 function IOResult: Integer;
 Function WinIoResult: Integer;
 function UpCase(ch: Char): Char;
+Procedure UpCaseStr(Var S:String);
 
 
 function InSet(Element: Integer; var SetStorage: TSetStorage): Boolean;
@@ -1654,6 +1658,16 @@ begin
 else
   Result := ch;
 end; 
+
+
+Procedure UpCaseStr(Var S:String);
+Var
+    I:Integer;
+begin
+    For I := 1 to Length(S) do
+       UpCase(S[I]);
+end;
+
 
 
    // Paul Robinson 2020-11-08 - My own version of

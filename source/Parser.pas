@@ -245,10 +245,7 @@ case IdentKind of
       
       IdentTypeSize := TypeSize(IdentDataType);
       if IdentTypeSize > MAXINITIALIZEDDATASIZE - InitializedGlobalDataSize then
-         begin
              Catastrophic('Fatal Error: Not enough memory for initialized global variable');
-             Exit;
-          end;
 
       Ident[NumIdent].Address := InitializedGlobalDataSize;               // Typed constant address (relocatable)
       InitializedGlobalDataSize := InitializedGlobalDataSize + IdentTypeSize;      
@@ -3368,7 +3365,8 @@ case Tok.Kind of
             begin
             NextTok;
             ValType := Ident[IdentIndex].Signature.ResultType;
-            
+
+            ParserState.ProcFuncName := Ident[IdentIndex].Name;
             CompileCall(IdentIndex);
             PushFunctionResult(ValType);
             ConvertRealToReal(REALTYPEINDEX, ValType);              // Real expressions must be double, not single            
@@ -4070,8 +4068,9 @@ procedure CompileStatement(LoopNesting: Integer);
     GenerateCaseStatementEpilog;
 
     Inc(NumCaseStatements);
-    
-    if (Tok.Kind = ELSETOK) or (Tok.Kind = ENDTOK) then
+
+    // Add "OTHERWISE" as alternative in case statement
+    if (Tok.Kind = ELSETOK) or  (Tok.Kind = OTHERWISETOK) or (Tok.Kind = ENDTOK) then
       begin
          if (TokenCTrace in TraceCompiler) or (KeywordCTrace in TraceCompiler) then
            if  Tok.Kind = ENDTOK then         // CASE .. END
@@ -4081,10 +4080,10 @@ procedure CompileStatement(LoopNesting: Integer);
           Break;
       end;
     EatTok(SEMICOLONTOK);
-  until (Tok.Kind = ELSETOK) or (Tok.Kind = ENDTOK);  // CASE .. END or CASE .. ELSE
+  until (Tok.Kind = ELSETOK) or (Tok.Kind = OTHERWISETOK) or (Tok.Kind = ENDTOK);  // CASE .. END or CASE .. ELSE / OTHERWISE
   
   // Default statements
-  if Tok.Kind = ELSETOK then   // CASE .. ELSE
+  if (Tok.Kind = ELSETOK) or (Tok.Kind = OTHERWISETOK) then   // CASE .. ELSE / OTHERWISE
     begin
     NextTok;
     // since a case statement must be terminated by an END
@@ -4480,7 +4479,7 @@ case Tok.Kind of
       else  //
       	begin
            Fatal('$$ 993 Statement expected but ' + Ident[IdentIndex].Name + ' found');
-           exit;
+
            // dumpcode not used, just saved
            //**ELSECATCHER
            // Our first attempt at error recovery; extra ; before else
@@ -4554,7 +4553,7 @@ procedure CompileType(var DataType: Integer);
     if ConstIndex > MAXENUMELEMENTS - 1 then
         begin
       		Fatal('Too many enumeration elements');
-      		exit;
+
       	end;		
       
     NextTok;
@@ -4611,7 +4610,7 @@ procedure CompileType(var DataType: Integer);
     if not (Types[IndexType].Kind in OrdinalTypes) then
       begin
       	  Fatal('Ordinal type expected for array bounds');
-      	  exit;
+
       end;	  
     Types[ArrType].IndexType := IndexType;
 
@@ -4645,7 +4644,7 @@ procedure CompileType(var DataType: Integer);
       if Types[RecType].Field[i]^.Name = FieldName then
         Begin
 	        Fatal('Duplicate field ' + FieldName);
-	        exit;
+	      ;
 	     end;
 
     // Add new field
@@ -4653,7 +4652,7 @@ procedure CompileType(var DataType: Integer);
     if Types[RecType].NumFields > MAXFIELDS then
       begin
   	    Fatal('Too many fields');
-  	    exit;
+
   	  end;  
       
     New(Types[RecType].Field[Types[RecType].NumFields]);
@@ -4674,7 +4673,7 @@ procedure CompileType(var DataType: Integer);
        HighBound(INTEGERTYPEINDEX) - NextFieldOffset then
        begin
       	   Fatal('Type size is too large');
-      	   exit;
+
        end;
 
     NextFieldOffset := NextFieldOffset + FieldTypeSize;
@@ -4701,7 +4700,7 @@ procedure CompileType(var DataType: Integer);
         if NumFieldsInList > MAXFIELDS then
 	       begin
     	       Fatal('Too many fields');
-    	       exit;
+
     	   end;     
           
         FieldInListName[NumFieldsInList] := Tok.Name;
@@ -4718,7 +4717,7 @@ procedure CompileType(var DataType: Integer);
       if IsInterfaceType and (Types[FieldType].Kind <> PROCEDURALTYPE) then
         begin
         	Fatal('Non-procedural fields are not allowed in interfaces');      
-        	exit;
+
         end;
 
       for FieldInListIndex := 1 to NumFieldsInList do
@@ -4772,7 +4771,7 @@ procedure CompileType(var DataType: Integer);
       if not (Types[TagType].Kind in OrdinalTypes) then
         begin
         	Fatal('Ordinal type expected for case variant');
-        	exit;
+
         end;
     
       VariantStartOffset := NextFieldOffset;    
@@ -4854,7 +4853,7 @@ procedure CompileType(var DataType: Integer);
   if (LowBound(NestedDataType) < 0) or (HighBound(NestedDataType) > MAXSETELEMENTS - 1) then
     begin
     	Fatal('Too many set elements');
-    	exit;
+
     end;	
   
   Types[DataType].BaseType := NestedDataType; 
@@ -4879,13 +4878,13 @@ procedure CompileType(var DataType: Integer);
     if not (Types[LenType].Kind in IntegerTypes) then
       begin
       	  Fatal('Integer type expected'); 
-      	  exit
+
       	 end;
       
     if (LenConstVal.OrdValue <= 0) or (LenConstVal.OrdValue > MAXSTRLENGTH) then
       begin
       	  Fatal('Illegal string length');  
-      	  exit;
+
       end;
     
     // Add new anonymous type: 1..Len + 1
@@ -4930,7 +4929,7 @@ procedure CompileType(var DataType: Integer);
     if Types[NestedDataType].Kind = FILETYPE then
       begin
       	  Fatal('File of files is not allowed');    // That would be a directory!
-      	  exit;
+
       end;
    
     // Add new anonymous type
@@ -4962,7 +4961,7 @@ procedure CompileType(var DataType: Integer);
           OrdinalTypes + [SUBRANGETYPE]) then
      begin    
     	Fatal('Ordinal type expected for low bound of subrange');
-    	exit;
+
     end;
   Types[DataType].Low := ConstVal.OrdValue;
 
@@ -4973,8 +4972,8 @@ procedure CompileType(var DataType: Integer);
           OrdinalTypes + [SUBRANGETYPE]) then
      begin     
    	 Fatal('Ordinal type expected for upper bound of subrange');
-    	 exit;
-   	 end;    
+
+     end;
   Types[DataType].High := ConstVal.OrdValue;
 
   GetCompatibleType(LowBoundType, HighBoundType);
@@ -4982,8 +4981,8 @@ procedure CompileType(var DataType: Integer);
   if Types[DataType].High < Types[DataType].Low then
     begin
     	Fatal('Illegal subrange bounds');
-    	exit;
-	end;    	
+
+    end;
 
   Types[DataType].BaseType := LowBoundType;  
   end; // CompileSubrangeType
@@ -5020,7 +5019,7 @@ if Tok.Kind = PACKEDTOK then        // PACKED has no effect
        [ARRAYTOK, RECORDTOK, INTERFACETOK, SETTOK, FILETOK]) then
      begin   
     	Fatal('PACKED is not allowed here');
-    	exit;
+
       end		
   end;
  
@@ -5095,7 +5094,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       if Ident[TypeIdentIndex].Kind <> USERTYPE then
       	begin
 	        Fatal('Type name expected');
-	        exit
+
 	     end;   
         
       // Forward reference resolution
@@ -5155,7 +5154,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       if Length(ConstVal.StrValue) > TypeSize(ConstType) - 1 then
         begin
         	Fatal('String is too long');
-        	exit;
+
         end;
         
       DefineStaticString(ConstVal.StrValue, InitializedDataOffset, InitializedDataOffset);
@@ -5232,7 +5231,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
   else
     begin
       	Fatal('Illegal type');
-    	exit
+
     end
 
   end; // CompileInitializer    
@@ -5364,7 +5363,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       if NumIdentInList > MAXPARAMS then
       	begin
         	Fatal('Too many variables in one list');
-        	exit;
+
         end;
       
       IdentInListName[NumIdentInList] := Tok.Name;
@@ -5386,13 +5385,13 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       if BlockStack[BlockStackTop].Index <> 1 then
       	begin
         	Fatal('Local variables cannot be initialized');
-        	exit;
+
         end;
         
       if NumIdentInList <> 1 then
       	begin
         	Fatal('Multiple variables cannot be initialized');
-        	exit;
+
         end;
         
       NextTok;
@@ -5469,7 +5468,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
         if BlockStackTop <> 1 then
         	begin
           		Fatal('External declaration must be global');
-          		exit;
+
           	end;
           
         // Read import library name
@@ -5478,7 +5477,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
         if not IsString(ImportLibNameConstValType) then
         	begin
           		Fatal('Library name expected');      
-          		exit;
+
           	end;
         
         // Register import function
@@ -5504,7 +5503,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       else
       	begin
         	Fatal('Unknown directive ' + Tok.Name);  
-        	exit;
+
         end;
     end; // CompileDirective
 
@@ -5575,14 +5574,14 @@ procedure CompileBlock(BlockIdentIndex: Integer);
     if not (Types[ReceiverType].Kind in StructuredTypes) then
     	BEGIN
       		Fatal('Structured type expected');
-      		exit;
+
       	end;
     
     
     if BlockStack[BlockStackTop].Index <> 1 then
     	begin
       		Fatal('Methods cannot be nested');
-      		exit;
+
       	end;
 
     if Types[ReceiverType].Kind in [RECORDTYPE, INTERFACETYPE] then
@@ -5590,8 +5589,8 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       FieldIndex := GetFieldUnsafe(ReceiverType, Parserstate.ProcFuncName);
       if FieldIndex <> 0 then
       	begin
-            Fatal('Duplicate field');
-            exit;
+            Fatal('Duplicate field ');
+
         end;
       end;    
     end;  
@@ -5631,7 +5630,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
        (Ident[NumIdent].Signature.CallConv <> DEFAULTCONV) then
        BEGIN
       	    Fatal('STDCALL/CDECL is not allowed for methods'); 
-      		EXIT;
+
       	END;
     end;           	
 
@@ -5644,7 +5643,7 @@ procedure CompileBlock(BlockIdentIndex: Integer);
        (ReceiverName <> Ident[ForwardIdentIndex].ReceiverName) then
        BEGIN
       	   Fatal('Incompatible receiver name');
-      	   EXIT;
+
       	END;
    
     GenerateForwardResolution(Ident[ForwardIdentIndex].Address);
@@ -5889,12 +5888,10 @@ procedure CompileBlock(BlockIdentIndex: Integer);
     begin
     if (Ident[IdentIndex].Kind in [GOTOLABEL, PROC, FUNC]) and
         Ident[IdentIndex].IsUnresolvedForward then
-      begin
           Fatal('Unresolved declaration (on Line ' +
                 IntToStr(Ident[IdentIndex].DeclaredLine) +
                 ') of ' + Ident[IdentIndex].Name);
-          Exit;
-      end;
+
     Dec(IdentIndex);
     end;
   end; // CheckUnresolvedDeclarations  

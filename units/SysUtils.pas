@@ -2,9 +2,9 @@
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 // Copyright 2020 Paul Robnson
 
-// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
+// Latest upgrade by Paul Robinson: Sometime in 2021
 
-// VERSION 0.15 {.0}
+// VERSION 0.16 {.0}
 
 // Similar to Delphi / free pascal Sysutils unit, with
 // items routinely used by user programs (and sometimes by the compiler)
@@ -54,7 +54,12 @@ type
      Minute,
      Second,
      MilliSecond: word;
-  end ;
+  end;
+
+  TFileTime = Record
+    LowDateTime,
+    HighDateTime: integer;
+   end;
 
 
 function IntToStr(n: Integer): string;

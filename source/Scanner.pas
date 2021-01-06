@@ -1,14 +1,14 @@
 // XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
-// Copyright 2020 Paul Robnson
+// Copyright 2020,2021 Paul Robnson
 
-// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
+// Latest upgrade by Paul Robinson: Groundhog Day; Tuesday, February 2, 2021
 
-// VERSION 0.15 {.0}
+// VERSION 0.16 {.0}
 
-// scans the source code looking for tokens. The Parser then determines
-// what the tokens mean and whether they are appropriate in that context
-// or not
+// scans the source code looking for tokens. The Parser (or the
+// cross-reference tool) then determines what the tokens mean and
+// whether they are appropriate in that context or not
 
 {$I-}
 {$H-}
@@ -155,11 +155,8 @@ end;
 procedure AppendStrSafe(var s: TString; ch: TCharacter);
 begin
 if Length(s) >= MAXSTRLENGTH - 1 then
-  begin
      Fatal('String is too long');
-     Exit;
-   end;
-   s := s + ch;
+ s := s + ch;
 end;
 
 
@@ -275,12 +272,9 @@ procedure ReadLiteralChar(var ch: TCharacter);
 begin
 ReadChar(ch);
 if (ch = #0) or (ch = #10) then
-  begin
       Fatal('Unterminated string (from ' +
              Radix(ScannerState.Token.DeclaredLine,10)+
             ':'+Radix(ScannerState.Token.DeclaredPos,10)+')');
-      Exit;
-   end
 end;
 
 // An include file replaces the comment it was in,
@@ -338,15 +332,14 @@ End;
           while ch in HexDigits do
           begin
               if Num and $F0000000 <> 0 then
-                  begin
-                     Fatal('Hexadecimal numeric constant is too large');
-                     Exit;
-                   end;
+                 Fatal('Hexadecimal numeric constant is too large');
+
               if ch in Digits then
-                  Digit := Ord(ch) - DigitZero
+                 Digit := Ord(ch) - DigitZero
               else
-                  Digit := Ord(ch) - Ord('A') + 10;
+                 Digit := Ord(ch) - Ord('A') + 10;
               Num := Num shl 4 or Digit;
+
               NumFound := TRUE;
               ReadUppercaseChar(ch);
            end;
@@ -356,21 +349,16 @@ End;
            begin
                Digit := Ord(ch) - Ord('0');
                if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
-                   begin
-                       Fatal('Decimal numeric constant is too large');
-                       Exit;
-                    end;
+                   Fatal('Decimal numeric constant is too large');
                Num := 10 * Num + Digit;
+
                NumFound := TRUE;
                ReadUppercaseChar(ch);
            end;
        end;
        if not NumFound then
-           begin
-               Fatal('Constant value not found');
-               Exit;
-            end;
-       Result := Num;
+           Fatal('Constant value not found');
+        Result := Num;
   end;
 
 procedure ReadSingleLineComment;
@@ -629,13 +617,18 @@ var
    begin
         repeat
           GetOptionParam(True);
-          if      Item = 'ALL' then
+          if (Item = 'ACTIVITY') then
+             if Show then
+                 TraceCompiler := TraceCompiler + [ActivityCTrace]
+             else
+                 TraceCompiler := TraceCompiler - [ActivityCTrace]
+          else if Item = 'ALL' then
              if Show then // "The Works"
                 TraceCompiler := [BecomesCTrace, SymbolCTrace,  UnitCTrace,
                           TokenCTrace,   KeywordCTrace, LoopCTrace,
                           CallCTrace,    ProcCTrace,    FuncCTrace,
                           IdentCTrace,   BlockCTrace,   CodeCTrace,
-                          CodeGenCTrace]
+                          CodeGenCTrace, ActivityCTrace]
               else // Hide all
                   TraceCompiler := []
            else if (Item = 'ASSIGN') or (Item = 'BECOMES') then
@@ -978,14 +971,9 @@ m := DUMPALL;
           IsConsoleProgram := TRUE
        else if Item = 'GUI' then
           IsConsoleProgram := FALSE
-     else
-        begin
-            Fatal('Unknown application type ' + Item);
-            ReadMultiLineComment(OldSchool);
-            Exit;
-        end;
-        ReadMultiLineComment;
-    end;
+       else
+           Fatal('Unknown application type ' + Item);
+   end;
 
    procedure OptionUnitPath;
        begin
@@ -993,7 +981,7 @@ m := DUMPALL;
         Inc(NumFolders);
         if NumFolders > MAXFOLDERS then
            begin
-              Fatal('Maximum number of unit paths exceeded');
+              Catastrophic('Maximum number of unit paths exceeded'); {fatal}
               Exit;
             end;
         Folders[NumFolders] := Folders[1] + Item;
@@ -1120,34 +1108,27 @@ var
 begin
 with ScannerState do
   begin
-  Num := 0;
+    Num := 0;
 
-  NumFound := FALSE;
-  while ch in HexDigits do
+    NumFound := FALSE;
+    while ch in HexDigits do
     begin
-    if Num and $F0000000 <> 0 then
-      Begin
+      if Num and $F0000000 <> 0 then
           Fatal('Numeric constant is too large');
-          Exit;
-       end;
-    if ch in Digits then
-      Digit := Ord(ch) - Ord('0')
-    else
-      Digit := Ord(ch) - Ord('A') + 10;
+      if ch in Digits then
+          Digit := Ord(ch) - Ord('0')
+      else
+          Digit := Ord(ch) - Ord('A') + 10;
+      Num := Num shl 4 or Digit;
 
-    Num := Num shl 4 or Digit;
-    NumFound := TRUE;
-    ReadUppercaseChar(ch);
+      NumFound := TRUE;
+      ReadUppercaseChar(ch);
     end;
-
-  if not NumFound then
-    begin
+    if not NumFound then
         Fatal('Hexadecimal constant is not found');
-        Exit;
-     end;
 
-  Token.Kind := INTNUMBERTOK;
-  Token.OrdValue := Num;
+    Token.Kind := INTNUMBERTOK;
+    Token.OrdValue := Num;
   end;
 end;
 
@@ -1160,15 +1141,13 @@ begin
   begin
       while ch in Digits do
       begin
-         Digit := Ord(ch) - Ord('0');
+           Digit := Ord(ch) - Ord('0');
+           if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
+               Fatal('Numeric constant is too large');
 
-         if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
-         begin
-             Fatal('Numeric constant is too large');
-             Exit;
-         end;
-         Num := 10 * Num + Digit;
-         ReadChar(ch);
+            Num := 10 * Num + Digit;
+
+            ReadChar(ch);
       end;
       Token.Kind := INTNUMBERTOK;
       Token.OrdValue := Num;
@@ -1181,6 +1160,7 @@ end;
 // integers and floating-point numbers
 procedure ReadDecimalNumber;
 var
+  DigitCount,
   Num, Expon, Digit: Integer;
   Frac, FracWeight: Double;
   NegExpon, RangeFound, ExponFound: Boolean;
@@ -1190,20 +1170,26 @@ with ScannerState do
   Num := 0;
   Frac := 0;
   Expon := 0;
+  DigitCount := 0;
   NegExpon := FALSE;
 
   while ch in Digits do
-    begin
-    Digit := Ord(ch) - Ord('0');
-
-    if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
-      begin
+  begin
+      inc(DigitCount);
+      Digit := Ord(ch) - Ord('0');
+      if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
           Fatal('Numeric constant is too large');
-          Exit;
-       end;
-    Num := 10 * Num + Digit;
-    ReadUppercaseChar(ch);
-    end;
+      Num := 10 * Num + Digit;
+      ReadUppercaseChar(ch);
+{ // save for nextr evision
+      if (DigitCount = 1) and (Ch='X') then    // abandon integer and read hex number
+      begin
+          ReadUppercaseChar(ch);    // Consume the X - it marks the spot
+          ReadHexadecimalNumber;    // allow 0xNNNN constants
+          exit;
+      end;
+}
+   end;
 
   if (ch <> '.') and (ch <> 'E') then                                   // Integer number
     begin
@@ -1217,12 +1203,12 @@ with ScannerState do
     RangeFound := FALSE;
     if ch = '.' then
       begin
-      ReadUppercaseChar(ch2);
-      if ch2 = '.' then                                                 // Integer number followed by '..' token
+        ReadUppercaseChar(ch2);
+        if ch2 = '.' then                                                 // Integer number followed by '..' token
         begin
-        Token.Kind := INTNUMBERTOK;
-        Token.OrdValue := Num;
-        RangeFound := TRUE;
+            Token.Kind := INTNUMBERTOK;
+            Token.OrdValue := Num;
+            RangeFound := TRUE;
         end;
       if not EndOfUnit then Dec(Buffer.Pos);
       end; // if ch = '.'
@@ -1268,11 +1254,8 @@ with ScannerState do
           ExponFound := TRUE;
           end;
 
-        if not ExponFound then
-          begin
+          if not ExponFound then
               Fatal('Exponent is not found');
-              Exit;
-           end;
         if NegExpon then Expon := -Expon;
         end; // if ch = 'E'
 
@@ -1305,21 +1288,14 @@ procedure ReadCharCode;
 begin
 with ScannerState do
   begin
-  ReadUppercaseChar(ch);
+     ReadUppercaseChar(ch);
+     if not (ch in Digits + ['$']) then
+          Fatal('Character code is not found');
+     ReadNumber;
 
-  if not (ch in Digits + ['$']) then
-    begin
-        Fatal('Character code is not found');
-        Exit;
-     end;
-  ReadNumber;
-
-  if (Token.Kind = REALNUMBERTOK) or (Token.OrdValue < 0) or (Token.OrdValue > 255) then
-    begin
-        Fatal('Illegal character code');
-        Exit;
-     end;
-  Token.Kind := CHARLITERALTOK;
+     if (Token.Kind = REALNUMBERTOK) or (Token.OrdValue < 0) or (Token.OrdValue > 255) then
+          Fatal('Illegal character code');
+     Token.Kind := CHARLITERALTOK;
   end;
 end;
 
@@ -1796,10 +1772,10 @@ with ScannerState do
       '@': Token.Kind := ADDRESSTOK;
       '[': Token.Kind := OBRACKETTOK;
       ']': Token.Kind := CBRACKETTOK;
-      '%': Begin Fatal('Currency and large constants not yet supported'); Exit; end;
-      '`': Begin Fatal('Tick quote "`" not allowed; only single quotes "''" may enclose quoted text'); Exit; end;
-      '"': Begin Fatal('Double quote ''"'' not allowed; only single quotes "''" may enclose quoted text'); Exit; end;
-      '}': begin Fatal('Closing comment } character found without opening {'); Exit; end
+      '%': Fatal('Currency and large constants not yet supported');
+      '`': Fatal('Tick quote "`" not allowed; only single quotes "''" may enclose quoted text');
+      '"': Fatal('Double quote ''"'' not allowed; only single quotes "''" may enclose quoted text');
+      '}': Fatal('Closing comment } character found without opening {');
     else     // don;t know what the character is
        If InComment then  // The only way we can "see" a character here while a comment is still "open" is if
                           // we reached end of file
@@ -1970,10 +1946,8 @@ Procedure ErrorIfNot(ExpectedTokKind: TTokenKind; Const ErrorNumber:Integer);
 begin
    with ScannerState do
   if Token.Kind <> ExpectedTokKind then
-    begin
-        Fatal(GetTokSpelling(ExpectedTokKind) + ' expected but ' + GetTokSpelling(Token.Kind) + ' found');
-        Exit;
-     end;
+     Fatal(GetTokSpelling(ExpectedTokKind) + ' expected but ' + GetTokSpelling(Token.Kind) + ' found');
+
 end;
 
 
@@ -1982,12 +1956,9 @@ procedure CheckEitherTok(ExpectedFirst, ExpectedOtherwise: TTokenKind);
 begin
 with ScannerState do
     if (Token.Kind <> ExpectedFirst) and (Token.Kind <> ExpectedOtherwise) then
-    begin
-        Fatal('Expecting either '+GetTokSpelling(ExpectedFirst) + ' or ' +
-              GetTokSpelling(ExpectedOtherwise)+' but found ' +
-              GetTokSpelling(Token.Kind) + ' inatead');
-        Exit;
-        end;
+         Fatal('Expecting either '+GetTokSpelling(ExpectedFirst) + ' or ' +
+               GetTokSpelling(ExpectedOtherwise)+' but found ' +
+               GetTokSpelling(Token.Kind) + ' inatead');
 end;
 
 
@@ -2006,10 +1977,7 @@ procedure AssertIdent;
 begin
 with ScannerState do
   if Token.Kind <> IDENTTOK then
-    begin
-        Fatal('Identifier expected but ' + GetTokSpelling(Token.Kind) + ' found');
-        Exit;
-     end;
+     Fatal('Identifier expected but ' + GetTokSpelling(Token.Kind) + ' found');
 end;
 
 

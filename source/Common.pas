@@ -25,7 +25,7 @@ const
      // XDPW - for display
 
        VERSION_MAJOR             = 0;
-       VERSION_RELEASE           = 15;
+       VERSION_RELEASE           = 16;
        VERSION_PATCH             = 0;
        VERSION_FULL              = VERSION_MAJOR*1000+
                                    VERSION_RELEASE *10+
@@ -34,9 +34,9 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '255';
-       CODENAME                  = 'New Years Eve';
-       RELEASEDATE               = 'Thursday, December 31, 2020';
+       VERSION_REV               = '9';
+       CODENAME                  = 'Groundhog Day';
+       RELEASEDATE               = 'Tuesday, February 2, 2021';
 
 
        Months: array[1..12] of string[9]=
@@ -72,7 +72,7 @@ const
 
   // Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
   // TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
-  NUMKEYWORDS               = 44;    // ANDTOK .. XORTOK, 'AND' .. 'XOR'
+  NUMKEYWORDS               = 45;    // ANDTOK .. XORTOK, 'AND' .. 'XOR'
   MAXENUMELEMENTS           = 256;
 // 2000 might have been too small for MAXIDENTS,
 // increasaing to 3000
@@ -134,11 +134,12 @@ const
         'NOT',
         'OF',
         'OR',
+        'OTHERWISE',
         'PACKED',
         'PROCEDURE',
         'PROGRAM',
-        'RECORD',
-        'REPEAT',           // 30
+        'RECORD',           // 30
+        'REPEAT',
         'SET',
         'SHL',
         'SHR',
@@ -147,8 +148,8 @@ const
         'TO',
         'TYPE',
         'UNIT',
-        'UNTIL',
-        'USES',              // 40
+        'UNTIL',             // 40
+        'USES',
         'VAR',
         'WHILE',
         'WITH',
@@ -336,6 +337,7 @@ type
         NOTTOK,           // NOT
         OFTOK,            // OF
         ORTOK,            // OR
+        OTHERWISETOK,     // OTHERWISE
         PACKEDTOK,        // PACKED
         PROCEDURETOK,     // PROCEDURE
         PROGRAMTOK,       // PROGRAM
@@ -566,15 +568,12 @@ type
     CallConv: TCallConv;
   end;
 
-  CrossP      = ^TCross;     // cross reference item
-  UsageP      = ^TUsage;     // uses of cross-referenced item
   IdentP      = ^TIdentifier;// A specific identifier
   TraceP      = ^TTrace;     // Trace table for debugging
 
   TIdentifier = record
     Prev,                    // Links for when this is a linked list
     Next: IdentP;            // instead of an array
-    Cross: CrossP;           // pointer to its cros-reference list
     Kind: TIdentKind;        // CONST, TYPE, PROC, FUNC, etc.
     Name: TString;
     // The following two items have two uses. (1) For procedural types
@@ -676,28 +675,6 @@ type
   // I had to back out all changes and use a diff/merge tool to carefully
   // re-add them individually until I discovered what broke it.
   TWriteProc = procedure (ClassInstance: Pointer; const Msg: TString);
-  
-
-
-  TCross = Record
-     Prev,                  // Pointers to items in list
-     Next: CrossP;
-     UnitNumber:Byte;
-     Name,                  // Name of this identifier
-     ProcName: TString;     // if local to a procedure
-     Page,                  // Location in listing
-     Line,
-     LocalLine: Integer;    // line number in unit/file
-     Usage: UsageP;         // List of usage
-  end;
-
-  TUsage = Record    // Cross reference
-      Next: UsageP;
-      Page,                     // Location in listing
-      Line,
-      LocalLine: Integer;       // line number in unit
-   end;
-
 
     // Internals - for compiler tracing
 
@@ -833,8 +810,7 @@ var
   SearchType,              // used when searching for types
   BaseType,             // base
   TopType: TypePtr;     // and top of type list
-  CrossBase,            // base and top of cross-refernce table
-  CrossTop: CrossP;     // cross reference item
+
 
   // Once we go to pointers insted of arrays, most of these wll either
   // change to a linked list, to a pointer, or disappear entirely
@@ -869,7 +845,6 @@ var
 
 // FOR PROGRAM LISTING AND COMPILER DEBUGGING
    ListProgram,
-   CrossReference,
    Statistics: Boolean;
    ListingLine,
    ListingPage: Integer;
@@ -1370,12 +1345,8 @@ begin
 end;
 
 end.
-
-
+        
+    
+    Ñ   
   
   
-  
-a   
-  
-  
-I       ‰       ×       ø 

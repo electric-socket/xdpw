@@ -32,7 +32,6 @@
       <Unit3>
         <Filename Value="Parser.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <TopLine Value="385"/>
         <CursorPos X="13" Y="405"/>
@@ -178,9 +177,12 @@
       <Unit22>
         <Filename Value="error.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="22" Y="6"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="123"/>
+        <CursorPos X="29" Y="151"/>
         <UsageCount Value="301"/>
+        <Loaded Value="True"/>
       </Unit22>
       <Unit23>
         <Filename Value="exer08.pas"/>
@@ -431,11 +433,15 @@
         <UsageCount Value="6"/>
       </Unit58>
     </Units>
-    <JumpHistory Count="1">
+    <JumpHistory Count="2" HistoryIndex="1">
       <Position1>
         <Filename Value="conditional.pas"/>
         <Caret Line="89" Column="26" TopLine="79"/>
       </Position1>
+      <Position2>
+        <Filename Value="error.pas"/>
+        <Caret Line="6" Column="22"/>
+      </Position2>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
