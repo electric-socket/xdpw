@@ -1,11 +1,11 @@
 Program a;
-{
+
 CONST
     K =  $20;
     L =   32;
     M = 0x20;
     N = 0X20;
-}
+
 VAR
     QQ: Integer;
 
