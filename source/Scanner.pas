@@ -1181,14 +1181,13 @@ with ScannerState do
           Fatal('Numeric constant is too large');
       Num := 10 * Num + Digit;
       ReadUppercaseChar(ch);
-{ // save for nextr evision
+
       if (DigitCount = 1) and (Ch='X') then    // abandon integer and read hex number
       begin
           ReadUppercaseChar(ch);    // Consume the X - it marks the spot
           ReadHexadecimalNumber;    // allow 0xNNNN constants
           exit;
       end;
-}
    end;
 
   if (ch <> '.') and (ch <> 'E') then                                   // Integer number
