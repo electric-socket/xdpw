@@ -18,11 +18,14 @@ unit Scanner;
 
 interface
 
-
-uses Common, Error, CompilerTrace, Conditional, Listing, Patch, Assembler, SysUtils;
-
-
-
+uses Common,
+     Error,
+     CompilerTrace,
+     Conditional,
+     Listing,
+     Patch,
+     Assembler,
+     SysUtils;
 
 
 procedure InitializeScanner(const Name: TString);
@@ -36,9 +39,9 @@ procedure EatEitherTok(ExpectedFirst, ExpectedOtherwise: TTokenKind);
 procedure AssertIdent;
 Procedure GetAssemblerStatement;
 procedure DefineStaticString(const StrValue: TString; var Addr: LongInt; FixedAddr: LongInt = -1);
+Procedure FlushChars;
 //procedure SkipTo(This: TTokenKind; That: TTokenKind = EMPTYTOK; Next: TTokenKind = EMPTYTOK; Something: TTokenKind = EMPTYTOK; Other: TTokenKind = EMPTYTOK);
 //Procedure SkipPast(This: TTokenKind; That: TTokenKind = EMPTYTOK; Next: TTokenKind = EMPTYTOK; Something: TTokenKind = EMPTYTOK; Other: TTokenKind = EMPTYTOK);
-
 
 
 implementation
@@ -52,6 +55,8 @@ Const
   HexDigits: set of TCharacter = ['0'..'9', 'A'..'F'];
   Spaces:    set of TCharacter = [#1..#31, ' '];
 
+Var
+   StringError: Boolean  = FALSE;
 
   procedure DefineStaticString(const StrValue: TString; var Addr: LongInt; FixedAddr: LongInt = -1);
   var
@@ -155,7 +160,13 @@ end;
 procedure AppendStrSafe(var s: TString; ch: TCharacter);
 begin
 if Length(s) >= MAXSTRLENGTH - 1 then
-     Fatal('String is too long');
+   begin
+//     Fatal('String is too long');
+       if not StringError then
+          Err( ERR_StringTooLong);         // String is too long
+       StringError := True;
+       Exit;
+   end;
  s := s + ch;
 end;
 
@@ -388,12 +399,14 @@ begin
     begin
         LCIdentifier := '';
         UCIdentifier := '';
+        StringError := False; // Flag error if it happens - Once
         repeat
              AppendStrSafe(LCIdentifier, ch);
              ch := UpCase(ch);
              AppendStrSafe(UCIdentifier, ch);
              ReadChar(ch);
         until not (ch in ValidIdents);
+        StringError := False;         // Allow it again
     end;
 end;
 
@@ -625,10 +638,10 @@ var
           else if Item = 'ALL' then
              if Show then // "The Works"
                 TraceCompiler := [BecomesCTrace, SymbolCTrace,  UnitCTrace,
-                          TokenCTrace,   KeywordCTrace, LoopCTrace,
-                          CallCTrace,    ProcCTrace,    FuncCTrace,
-                          IdentCTrace,   BlockCTrace,   CodeCTrace,
-                          CodeGenCTrace, ActivityCTrace]
+                          TokenCTrace,   KeywordCTrace,    LoopCTrace,
+                          CallCTrace,    ProcCTrace,       FuncCTrace,
+                          IdentCTrace,   BlockCTrace,      CodeCTrace,
+                          CodeGenCTrace, StatisticsCTrace, ActivityCTrace]
               else // Hide all
                   TraceCompiler := []
            else if (Item = 'ASSIGN') or (Item = 'BECOMES') then
@@ -712,6 +725,11 @@ var
                    TraceCompiler := TraceCompiler + [ProcCTrace,FuncCTrace]
                 else
                    TraceCompiler := TraceCompiler - [ProcCTrace,FuncCTrace]
+            else if Item = 'STATISTICS' then
+                if Show then
+                   TraceCompiler := TraceCompiler + [StatisticsCTrace]
+                 else
+                   TraceCompiler := TraceCompiler - [StatisticsCTrace]
             else if Item = 'SYMBOL' then
                 if Show then
                    TraceCompiler := TraceCompiler + [SymbolCTrace]
@@ -1099,6 +1117,14 @@ with ScannerState do
   end;
 end;
 
+Procedure FlushChars;
+begin
+//skip until interrupted by blank or ;
+    With Scannerstate do
+        while not (ch in spaces+[';']) do
+            readchar(ch);
+end;
+
 
 // hexadecimal numbers
 procedure ReadHexadecimalNumber;
@@ -1114,7 +1140,11 @@ with ScannerState do
     while ch in HexDigits do
     begin
       if Num and $F0000000 <> 0 then
-          Fatal('Numeric constant is too large');
+      begin
+           Err(ERR_IntTooBig); // Integer constant exceeds range
+           FlushChars;
+           exit;
+      end;
       if ch in Digits then
           Digit := Ord(ch) - Ord('0')
       else
@@ -1125,7 +1155,9 @@ with ScannerState do
       ReadUppercaseChar(ch);
     end;
     if not NumFound then
-        Fatal('Hexadecimal constant is not found');
+//        Fatal('Hexadecimal constant is not found');
+
+        Err( ERR_Constant); // Error in Constant
 
     Token.Kind := INTNUMBERTOK;
     Token.OrdValue := Num;
@@ -1143,11 +1175,13 @@ begin
       begin
            Digit := Ord(ch) - Ord('0');
            if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
-               Fatal('Numeric constant is too large');
-
-            Num := 10 * Num + Digit;
-
-            ReadChar(ch);
+           begin
+                Err(ERR_IntTooBig); // Integer constant exceeds range
+                FlushChars;
+                break;  // to avoid spurious second error of no value
+           end;
+           Num := 10 * Num + Digit;
+           ReadChar(ch);
       end;
       Token.Kind := INTNUMBERTOK;
       Token.OrdValue := Num;
@@ -1155,7 +1189,51 @@ begin
    end;
 end;
 
+// integers in any base 2..36
+procedure ReadOtherBaseNumber;
+var Base,
+    Digit: Integer;
+    TestString: String[37];
 
+begin
+  TestString := RadixString+' ';
+  with scannerstate do
+  begin
+      if (token.Ordvalue < 2 ) or (token.ordvalue>36) then
+      begin
+          Err( ERR_BadBase); // base must be 2..36
+          FlushChars;
+          exit;
+      end;
+      Base := Token.ordvalue;
+      Token.OrdValue := -1;
+      while ch in RadixSet do
+      begin
+          For Digit := 1 to 37 do
+             if Ch = RadixString[Digit] then
+                Break;
+          If  Digit > Base then
+          begin
+               Err2( ERR_BadBaseChar,Radix(Base,10),Ch); // Not valid for base N
+               FlushChars;
+               exit;
+          end;
+          if Token.OrdValue > (HighBound(INTEGERTYPEINDEX) - Digit) div base then
+          begin
+               Err(ERR_IntTooBig); // Integer constant exceeds range
+               FlushChars;
+               exit;
+          end;
+          Token.OrdValue  := Base * Token.OrdValue  + Digit;
+          ReadUppercaseChar(ch);
+      end;
+      if Token.Ordvalue<0 then
+      begin
+          Err( ERR_Constant);    // error in constant
+          FlushChars;
+      end;
+   end;
+end;
 
 // integers and floating-point numbers
 procedure ReadDecimalNumber;
@@ -1178,14 +1256,28 @@ with ScannerState do
       inc(DigitCount);
       Digit := Ord(ch) - Ord('0');
       if Num > (HighBound(INTEGERTYPEINDEX) - Digit) div 10 then
-          Fatal('Numeric constant is too large');
+      begin
+           Err(ERR_IntTooBig); // Integer constant exceeds range
+           FlushChars;
+           Token.Kind := INTNUMBERTOK;   // To prevent spurious error later
+           Token.OrdValue := Num;
+           exit;
+      end;;
       Num := 10 * Num + Digit;
       ReadUppercaseChar(ch);
 
-      if (DigitCount = 1) and (Ch='X') then    // abandon integer and read hex number
+      if (DigitCount = 1) and (Num=0) and (Ch='X') then    // abandon integer and read hex number
       begin
           ReadUppercaseChar(ch);    // Consume the X - it marks the spot
           ReadHexadecimalNumber;    // allow 0xNNNN constants
+          exit;
+      end;
+      if (DigitCount <3) and (Ch='#') then    // abandon integer and read specific base number
+      begin
+          ReadUppercaseChar(ch);        // Consume the #
+          Token.Kind := INTNUMBERTOK;
+          Token.OrdValue := Num;        // save the radix in Token
+          ReadOtherBaseNumber;          // allow radix#number constants
           exit;
       end;
    end;
@@ -1254,9 +1346,16 @@ with ScannerState do
           end;
 
           if not ExponFound then
-              Fatal('Exponent is not found');
-        if NegExpon then Expon := -Expon;
-        end; // if ch = 'E'
+          begin
+//              Fatal('Exponent is not found');
+              Err( ERR_NoExponent); // Exponent expected
+              FlushChars;
+              Token.Kind := REALNUMBERTOK;   // To prevent spurious error later
+              Token.RealValue := Pi;
+              exit;
+          end;
+          if NegExpon then Expon := -Expon;
+      end; // if ch = 'E'
 
       Token.Kind := REALNUMBERTOK;
       Token.RealValue := (Num + Frac) * exp(Expon * ln(10));
@@ -1902,7 +2001,7 @@ with ScannerState do
        OBRACKETTOK: EN := Err_11;
        CBRACKETTOK: EN := Err_12;
             ENDTOK: EN := Err_13;
-      SEMICOLONTOK: EN := Err_14;
+      SEMICOLONTOK: EN := ERR_SemiColonExpected;
           MINUSTOK: EN := Err_16;
           BEGINTOK: EN := Err_17;
         BECOMESTOK: EN := Err_51;

@@ -77,7 +77,7 @@ begin  // Declare identifier
 if (i > 0) and (Ident[i].UnitIndex = ParserState.UnitStatus.Index) and
    (Ident[i].Block = BlockStack[BlockStackTop].Index) then
       // allow a duplicate identifier, with error
-    Err3(Err_101,IdentName,Radix(Ident[i].DeclaredLine,10),Radix(Ident[i].DeclaredPos,10));;
+    Err3( ERR_IllegalType1,IdentName,Radix(Ident[i].DeclaredLine,10),Radix(Ident[i].DeclaredPos,10));;
 
 
 Inc(NumIdent);   // current top of table
@@ -1050,8 +1050,8 @@ case func of
     else                                                                // Variable name
       begin
           if IdentIndex = 0 then
-               Err1(Err_104,Tok.Name); // identifier not declared
-           Err(Err_10); // Type name expected
+               Err1( ERR_IllegalType4,Tok.Name); // identifier not declared
+           Err( ERR_IllegalType); // Type name expected
       end;
     ConstValType := INTEGERTYPEINDEX;
     end;
@@ -3950,14 +3950,14 @@ procedure CompileStatement(LoopNesting: Integer);
   else if DesignatorIsStatement then    // Optional assignment if designator already ends with a function call   
     if (Tok.Kind = BECOMESTOK) or (Tok.Kind = ERRSEMIEQTOK) then
       BEGIN
-          ItsWrongIf(ERRSEMIEQTOK,BECOMESTOK,Err_14); // "; expected"
+          ItsWrongIf(ERRSEMIEQTOK,BECOMESTOK, ERR_SemiColonExpected); // "; expected"
           CompileAssignment(DesignatorType);
       end
     else
       DiscardStackTop(1)                // Nothing to do - remove designator
   else                                  // Mandatory assignment
     BEGIN
-        ErrIfNot(BECOMESTOK,Err_14);    // if not becomes (:=), error and pretend it was
+        ErrIfNot(BECOMESTOK, ERR_SemiColonExpected);    // if not becomes (:=), error and pretend it was
         CompileAssignment(DesignatorType);  // this NEXTs the symbol, good or bad
     end; 
   end; // CompileAssignmentOrCall
@@ -5219,9 +5219,9 @@ procedure CompileBlock(BlockIdentIndex: Integer);
         Move(ConstVal.PointerValue, InitializedGlobalData[InitializedDataOffset], TypeSize(ConstType));
         if Tok.Kind <> NILTOK then
           begin
-           Err(Err_305);  // "NIL is only initialization allowed"
+           Err( ERR_NILOnly);  // "NIL is only initialization allowed"
            if tok.kind <> SEMICOLONTOK THEN
-              Presume(SkipUntil,SEMICOLONTOK);
+             FlushChars;
           end
         else  // initialization  OK
           NextTok;       // step over NIL
@@ -5229,12 +5229,8 @@ procedure CompileBlock(BlockIdentIndex: Integer);
     end
 
   else
-    begin
-      	Fatal('Illegal type');
-
-    end
-
-  end; // CompileInitializer    
+      Err( ERR_IllegalType) //   Fatal('Illegal type');
+  end; // CompileInitializer
 
 
 
@@ -6210,7 +6206,7 @@ begin
                       AssertIdent;
                       if (FileCount > 10) and not skipErrors then
                       begin
-                           Err(Err_175);    // too many files in program header
+                           Err(ERR_ManyFilesinProgramHeader);    // too many files in program header
                            SkipErrors :=true;
                       end;
                       Inc(FileCount);
@@ -6300,17 +6296,8 @@ if ParserState.IsUnit then
         emittoken('EXIT CompileBlock at Zero');
     CheckTok(PERIODTOK);
 
-    // Question being, why fault the compile if they got to a
-    // successful end? Because if they forgot to $ENDIF their
-    // conditional block, it may have incorrect code left in.
-    // Besides, it's sloppy practice.
-    // make sure conditional code was closed
-        if (CIndex <>0) then   // eof in conditional code
-          begin
-           Err2(Err_71,Radix(Ctable[Cindex].Line,10),Radix(Ctable[Cindex].Pos,10));
-           UnRecoverable;
-          end;
-
+    if (CIndex <>0) then   // eof in conditional code
+        Err2(Err_71,Radix(Ctable[Cindex].Line,10),Radix(Ctable[Cindex].Pos,10));
 
     PatchState := PatchProgram; // presumably we are outside of any
                                 // unit at this point

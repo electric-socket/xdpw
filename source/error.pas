@@ -25,17 +25,17 @@ CONST
 {    ERR_7	= 7 ; }
      ERR_8	= 8 ;
      ERR_9	= 9 ;
-     ERR_10	= 10 ;  // Type name expected
+      ERR_IllegalType	= 10 ;  // Type name expected
      ERR_11	= 11 ;
      ERR_12	= 12 ;
      ERR_13	= 13 ;
-     ERR_14	= 14 ; // ; expected
+      ERR_SemiColonExpected	= 14 ; // ; expected
 {    ERR_15	= 15 ; }
      ERR_16	= 16 ;
      ERR_17	= 17 ;
 {    ERR_31	= 31 ; }
      ERR_32	= 32 ;   // incompatible no. of params
-{    ERR_50	= 50 ; }
+      ERR_Constant	= 50 ; // Error in constant
      ERR_51	= 51 ;
      ERR_52	= 52 ;
      ERR_53	= 53 ;
@@ -49,25 +49,32 @@ CONST
      ERR_71	= 71 ;  // Runaway conditional code block
      ERR_72     = 72 ;  // Feature not yet working (non-fatal version of 399)
      ERR_73	= 73 ;  // $DEBUG must be enabled at start of PROGRAM or UNIT
-{    ERR_100	= 100 ; }
-     ERR_101	= 101 ;  // identifier previously declared
-{    ERR_102	= 102 ; }
-{    ERR_103	= 103 ; }
-     ERR_104	= 104 ;   // Identifier not declared
-{    ERR_105	= 105 ; }
+{     ERR_IllegalType0	= 100 ; }
+      ERR_IllegalType1	= 101 ;  // identifier previously declared
+{     ERR_IllegalType2	= 102 ; }
+{     ERR_IllegalType3	= 103 ; }
+      ERR_IllegalType4	= 104 ;   // Identifier not declared
+{     ERR_IllegalType5	= 105 ; }
 {    ERR_121	= 121 ; }
      ERR_122	= 122 ;   // Format specifiers only allowed for untyped or text files
 {    ERR_123	= 123 ; }
      ERR_124	= 124 ;   // F-format for Real Only
 {    ERR_125	= 125 ; }
 {    ERR_174	= 174 ; }
-     ERR_175	= 175 ;  // too many files in program header
+     ERR_ManyFilesinProgramHeader	= 175 ;  // too many files in program header
 {    ERR_176	= 176 ; }
 {    ERR_200	= 200 ; }
+     ERR_RealConst	      = 201 ; // error in real constant
+     ERR_StringExceedsLine    = 202 ; // String exceeds line
+      ERR_StringTooLong                  = 203 ; // String is too long
+     ERR_IntTooBig	= 204 ; // Integer constant exceeds range
+      ERR_BadBaseChar	= 210 ; // Invalid char "X" in base N
+      ERR_BadBase	= 211 ; // Base must be 2..36
+      ERR_NoExponent	= 212 ; // Exponent Expectedc
 {    ERR_300	= 300 ; }
-     ERR_301	= 301 ; // Error in Conditional compilation expression
+     ERR_CondDirective	= 301 ; // Error in Conditional compilation expression
 {    ERR_304	= 304 ; }
-     ERR_305	= 305 ;    // NIL is the only pointer initialization
+      ERR_NILOnly	= 305 ;    // NIL is the only pointer initialization
 {    ERR_306	= 306 ; }
      ERR_398	= 398 ;    // Cannot nest $INCLUDE files
 {    ERR_399	= 399 ; }
@@ -450,9 +457,9 @@ Case ErrNum of // By the way, there is  nolimit on the number of case selector
   7: NoticePrefix_S('Error 7: Error in Parameter List');
   8: NoticePrefix_S('Error 8: ''Of'' Expected, found "'+Errors[1]+'" .');
   9: NoticePrefix_S('Error 9: ''('' Expected, found "'+Errors[1]+'".');
- 10: NoticePrefix_S('Error 10: Type name expected');  //
- 11: NoticePrefix_S('Error 11: ''['' Expected, found "'+Errors[1]+'".');
- 12: NoticePrefix_S('Error 12: '']'' Expected, found "'+Errors[1]+'".');
+ 10: NoticePrefix_S('Error 10: Error in type');  // Stanfoird version; Original was: Type name expected
+ 11: NoticePrefix_S('Error 11: Left square bracket ''['' Expected, found "'+Errors[1]+'".');
+ 12: NoticePrefix_S('Error 12: Right square bracket '']'' Expected, found "'+Errors[1]+'".');
  13: NoticePrefix_S('Error 13: ''End'' Expected, found "'+Errors[1]+'".');
  14: NoticePrefix_S('Error 14: Semicolon '';'' Expected, found "'+Errors[1]+'".'); // used
  15: NoticePrefix_S('Error 15: Integer Expected');
@@ -558,10 +565,11 @@ Case ErrNum of // By the way, there is  nolimit on the number of case selector
 187: NoticePrefix_S('Error 187: Packed Variable Is Not Allowed in Variable Parameter.');
 201: NoticePrefix_S('Error 201: Error in Real Constant: Digit Expected.');
 202: NoticePrefix_S('Error 202: String Constant must Not Exceed Source Line.');
-203: NoticePrefix_S('Error 203: Integer Constant Exceeds Range.');
-210: NoticePrefix_S('Error 210: Invalid Base &1 Digit ''&2''.');  //
-211: NoticePrefix_S('Error 211: Binary Numeric Constant Is Too Large.');  //
-212: NoticePrefix_S('Error 212: Octal Numeric Constant Is Too Large.');   //
+203: NoticePrefix_S('Error 203: String Constant Too Long.');
+204: NoticePrefix_S('Error 204: Integer Constant Exceeds Range.');
+210: NoticePrefix_S('Error 210: Invalid Base '+Errors[1]+' Digit "'+Errors[2]+'"');  //
+211: NoticePrefix_S('Error 211: Base number must be in range 2..36.');  //
+212: NoticePrefix_S('Error 212: Exponent Expected.');   //
 213: NoticePrefix_S('Error 213: Decimal Numeric Constant Is Too Large.');  //
 214: NoticePrefix_S('Error 214: Hexadecimal Numeric Constant Is Too Large.');  //
 215: NoticePrefix_S('Error 215: Real Number Constant Is Too Large.');  //

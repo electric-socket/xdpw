@@ -1,10 +1,10 @@
 // XD Pascal for Windows (XPDW) - a 32-bit compiler
 // Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
-// Copyright 2020 Paul Robnson
+// Copyright 2020,2021 Paul Robnson
 
-// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
+// Latest upgrade by Paul Robinson: Groundhog Day; Tuesday, February 2, 2021
 
-// VERSION 0.15  {.0}
+// VERSION 0.16 {.0}
 
 // The Main program of the compiler.
 
@@ -37,7 +37,7 @@
 program XDPW;  // (Input,Output,xprogram,m);
 
 uses SysUtils, Common, Conditional, CompilerTrace, Scanner,
-     Parser, CodeGen, Linker, Listing, Error, cref;
+     Parser, CodeGen, Linker, Listing, Error;
 //
 // $NOTE Noteworks are capable*)
 { $Warning theWarning works}
@@ -174,7 +174,7 @@ begin
     Notice('XD Pascal for Windows (Release Code named "' + CODENAME+'"), Version '+ Advicemessage);
     Notice('    Release date: '+ReleaseDate);
     Notice('Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov');
-    Notice('Copyright 2020 Paul Robinson');
+    Notice('Copyright 2020, 2021 Paul Robinson');
 
     GetLocalTime(StartTime);
 
@@ -287,7 +287,8 @@ begin
 // we won't bother with days,
 // nobody is going to compile something taking that long
 // (anything tht big, they'd use a full-service
-// monolithic compiler)
+// monolithic compiler, or a rendering farm, and use a
+// compiler that produced separate modules with a 'make' system(
     TimeString := '';
     If H >0 then
         Timestring := Plural(H,'hours','hour')+' ';
@@ -317,5 +318,9 @@ begin
 
     repeat FinalizeScanner until not RestoreScanner;
     FinalizeCommon;
+
+    If StatisticsCTrace in TraceCompiler then
+       ShowStatistics;
+
 end.
 

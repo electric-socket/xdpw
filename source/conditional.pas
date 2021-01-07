@@ -427,14 +427,14 @@ End;
               SkipSpaces;
               IF (ScanPoint > WL-10) then  // not enough room for DEFINED( plus 1 char and )
               begin
-                  Err(Err_301); // Conditional not understood
+                  Err( ERR_CondDirective); // Conditional not understood
                   tok.Kind := ERRSTMTTOK;
                   Exit;
               end;
               WDefine := ExtractIdent;
               if (WDefine<>'DEFINED') or (Workstring[ScanPoint]<>'(') then
               begin
-                  Err(Err_301); // Conditional not understood
+                  Err( ERR_CondDirective); // Conditional not understood
                   tok.Kind := ERRSTMTTOK;
                   Exit;
               END;
@@ -494,7 +494,7 @@ End;
               ParseArg;
               If not (Workstring[ScanPoint] in ['<','=','>']) then
               begin
-                  Err(Err_301); // Conditional not understood
+                  Err( ERR_CondDirective); // Conditional not understood
                   exit;
               end;
 

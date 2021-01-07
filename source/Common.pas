@@ -34,7 +34,7 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '11';
+       VERSION_REV               = '15';
        CODENAME                  = 'Groundhog Day';
        RELEASEDATE               = 'Tuesday, February 2, 2021';
 
@@ -44,6 +44,7 @@ const
              'July',    'August', 'September','October','November', 'Decenber');
        Days: Array[0..6] of string[9]=
              ('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday');
+
 
        DigitZero = Ord('0');     // used to translate digits to numbers
 
@@ -107,7 +108,8 @@ const
   // Note: If you add new tokens, GETKEYWORD, GETTOKSPELLING,
   // TTOKENKIND, NUMKEYWORDS, and KEYWORD must **ALL** be adjusted.
   // Also, to make comparisons shorter, these are defined as 20-character strings
-    Keyword: array [1..NUMKEYWORDS] of String[20] =
+  KeyWordSize = 20; // Change if thereareany longerthan 20 characters
+    Keyword: array [1..NUMKEYWORDS] of String[KeywordSize] =
         (
         'AND',       // this ties to value of ANDTOK
         'ARRAY',
@@ -424,6 +426,7 @@ var
     Digits:    set of TCharacter = ['0'..'9'];
     HexDigits: set of TCharacter = ['0'..'9', 'A'..'F'];
     Spaces:    set of TCharacter = [#1..#31, ' '];
+    RadixSet:  set of TCharacter = ['0'..'9', 'A'..'I', 'J'..'R', 'S'..'Z'];
     // to allow for EBCDIC or ASCII this uses smaller blocks of chars
   Identifiers: Set of TCharacter = ['A'..'I', 'J'..'R', 'S'..'Z',
                                       'a'..'i', 'j'..'r', 's'..'z','_'];
@@ -689,7 +692,6 @@ type
                    CodeCTrace,          // actual code being generated
                    CodeGenCTrace,       // see what is being called for code generation
                    CommentCTrace,       // comment trace
-                   CStatistics,         // compiler statistics
                    FuncCTrace,          // functions
                    IdentCTrace,         // identifiers
                    IndexCtrace,         // index value on call to start compiling a block
@@ -699,6 +701,7 @@ type
                    LoopCTrace,          // Loops: For, Repeat, While
                    NarrowCTrace,        // show one token per line
                    ProcCTrace,          // Procedures
+                   StatisticsCTrace,    // compiler statistics
                    SymbolCTrace,        // symbols
                    TokenCTrace,         // tokens in general (basically everything)
                    UnitCTrace          // unit and program
@@ -741,7 +744,7 @@ var
                                  // IF, GOTO, assignment, call, REPEAT, FOR . BEGIN, UNTIL, etc.
        Tok: TToken;
        TokenBuffer: Array[1..MaxTokens] of TToken; // used by the assembler
-
+       KeyWordCount: Array[1..NUMKEYWORDS] of Integer;
 
 
   // CompilerTrace
@@ -1166,6 +1169,7 @@ function IsString(DataType: Integer): Boolean;
 
 function GetKeyword(const KeywordName: TString): TTokenKind;
 var
+  Index,
   Max, Mid, Min: Integer;
   Found: Boolean;
 begin
@@ -1184,7 +1188,12 @@ repeat
   Found := KeywordName = Keyword[Mid];
 until Found or (Min > Max);
 
-if Found then Result := TTokenKind(Ord(ANDTOK) - 1 + Mid);
+   if Found then
+   begin
+       Index := Ord(ANDTOK) - 1 + Mid;
+       Result := TTokenKind(Index);
+       Inc(KeyWorDCount[Index])
+   End;
 end;
 
 
@@ -1350,3 +1359,4 @@ end.
     Ñ   
   
       
+      3 

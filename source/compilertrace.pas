@@ -31,9 +31,56 @@ Procedure EmitToken(Token: String; DoWriteln:Boolean=False; ShowPrefix: Boolean=
 Procedure EmitGen(Token: String; DoWriteln:Boolean=False; ShowPrefix: Boolean=True; ShowSuffix: Boolean=True);
 Procedure EmitHint(Token: String; DoWriteln:Boolean=False; ShowPrefix: Boolean=True; ShowSuffix: Boolean=True);
 Procedure EmitStop;
+Procedure ShowStatistics;
+
 
 
 implementation
+
+Procedure ShowStatistics;
+
+Var
+   J,
+   N,
+   I: Integer;
+   KSC:Array[1..NumKeywords] of integer;
+   S:String;
+   // Since there's less than 100 entries
+   // and we only do this once, we don't need
+   // a fast sort
+begin
+    For I := 1 to NumKeywords-1 do
+        KSC[I] := I;
+    For I := 1 to NumKeywords-1 do
+        For J := I+1 to NumKeywords do
+        begin
+            If KeywordCount[I]<KeywordCount[J] then
+            begin
+                KSC[I] := J;
+                KSC[J] := I;
+            end;
+        end;
+
+    Writeln('Alphabetical list of keywords by usage');
+    N := 0;
+    Write(' ':4);
+    For I := 1 to NumKeywords-1 do
+    begin
+        If KeywordCount[i]=0 then Continue;
+        S :=Keyword[I]+' '+Comma(KeywordCount[I]);
+        J :=26-Length
+        (S);
+        Write(S,' ':J);
+        N:= N+26;
+        if N>=78 then
+        begin
+            writeln;
+            N := 0;
+        end;
+    end;
+    writeln;
+end;
+
 
 Procedure EmitToken(Token:String;
                     DoWriteln:Boolean=False;
