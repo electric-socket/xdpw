@@ -26,7 +26,7 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <Units Count="32">
+    <Units Count="33">
       <Unit0>
         <Filename Value="XDPW.pas"/>
         <IsPartOfProject Value="True"/>
@@ -163,6 +163,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="CompilerOptions"/>
       </Unit31>
+      <Unit32>
+        <Filename Value="exer10.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit32>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

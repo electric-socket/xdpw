@@ -1198,11 +1198,11 @@ end;
 procedure ReadOtherBaseNumber;
 var Base,
     Digit: Integer;
-    TestString: String[37];
+  BadNum:Boolean;
+
 
 begin
-  TestString := RadixString+' ';
-  with scannerstate do
+   with scannerstate do
   begin
       if (token.Ordvalue < 2 ) or (token.ordvalue>36) then
       begin
@@ -1211,10 +1211,11 @@ begin
           exit;
       end;
       Base := Token.ordvalue;
-      Token.OrdValue := -1;
+      Token.OrdValue := 0;
+      BadNum := TRUE;
       while ch in RadixSet do
       begin
-          For Digit := 1 to 37 do
+          For Digit := 0 to 36 do
              if Ch = RadixString[Digit] then
                 Break;
           If  Digit > Base then
@@ -1230,9 +1231,10 @@ begin
                exit;
           end;
           Token.OrdValue  := Base * Token.OrdValue  + Digit;
+          BadNum := FALSE;
           ReadUppercaseChar(ch);
       end;
-      if Token.Ordvalue<0 then
+      if BadNum then
       begin
           Err( ERR_Constant);    // error in constant
           FlushChars;

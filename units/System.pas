@@ -163,10 +163,10 @@ ERROR_HANDLE_EOF          =    38; // (0x26)   Reached the end of the file.
 //ERROR_CANNOT_MAKE         =    82; //  (0x52)    The directory or file cannot be created.
 
 
-   RadixString: Array[0..35] of char=('0','1','2','3','4','5','6','7','8','9',
+   RadixString: Array[0..36] of char=('0','1','2','3','4','5','6','7','8','9',
                          'A','B','C','D','E','F','G','H','I','J',
                             'K','L','M','N','O','P','Q','R','S','T',
-                         'U','V','W','X','Y','Z');
+                         'U','V','W','X','Y','Z','A');
 
 
 type

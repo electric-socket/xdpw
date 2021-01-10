@@ -34,7 +34,7 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '22';
+       VERSION_REV               = '28';
        CODENAME                  = 'Groundhog Day';
        RELEASEDATE               = 'Tuesday, February 2, 2021';
 
@@ -1362,4 +1362,4 @@ end.
   
       
       3 
-              
+                          

@@ -1,10 +1,9 @@
+// Test program for
 // XD Pascal for Windows (XPDW) - a 32-bit compiler
-// Copyright (c) 2009-2010, 2019-2020, Vasiliy Tereshkov
 // Copyright 2020 Paul Robnson
 
-// Latest upgrade by Paul Robinson: New Years Eve; Thursday, December 31, 2020
 
-// VERSION 0.15    {.0}
+// VERSION 0.16    {.0}
 
 // Check compiler func/proc nesting depth
 
