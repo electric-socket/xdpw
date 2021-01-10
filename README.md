@@ -1,3 +1,35 @@
+#  XDPascal for Windows Version 0.16
+For some reason these changes I made to the file do not appear here even though
+it was properly COMMITted and I even manually uploaded it. I'm still seeing the old 
+0.15 release file. I'm not sure what's wrong.
+
+This is the documentation for the (aat this moment upcoming) release of version 0.16 of 
+the XDPascal compiler (February 2, 2021, code name "Groundhog Day")
+
+Now repeat that 1,000 times. (Yeah, I know that's a weak reference to the
+movie of the same name.)
+
+These are the things I got done while also working on a cross-reference tool (as I state below).
+- Fixed a nasty bug that broke the Readln processor and that
+I hadn't even realized I'd done it; I thought I put everything back as it was.
+I had actually broken it in 0.15 because a test program that compileds fine
+with Version 0.14.1 (as well as Free Pascal) but had a syntax error now, and
+in 0.15.
+- In going along with making Pascal more like C, in addition to using $ to
+indicate a hexadecimal constant, you can also prefix it with 0x (or 0X) as in
+0xBEF, 0xbef. 0xBEF, etc.  So the statements <code>a= $5B;</code> or
+<code>a= 0x5B;</code> are equivalent.
+- in addition to indicating the alternative when no selector matches on a
+CASE statement with ELSE, you may also use OTHERWISE. It has been added as a
+reserved word.
+
+There are other things I'm working on but i don't want tol reveal them until
+I have them working. If you're readsing this it means I haven't fixed it yet.
+The "Radix constant" operator n#x where n is an integer from 2-36 and X is a
+number expressed in that base. When it works, you can use it like  17, $11,
+or 0x11 with 2#10001, 8#21, 17#10, or 18#G.
+
+      
 # XDPascal Version 0.15
 
 This is the documentation for the release of version 0.15 of the XDPascal compiler (December 31, 2020, code name "New Years Eve"), written by the current maintainer, Paul Robinson. The project home is https://XDPascal.com, it can be downloaded from there, from Github, or from Sourceforge, and bugs can be reported at https://bugs.xdpascal.com, (currently using Mantis; I may switch to Bugzilla) or by e-mail to XDPascal@xdpascal.com. XDPascal is a 32-bit one-pass self-hosting Pascal compiler for Windows on X86 processors. It is open source, written in Pascal (it is used to compile itself), and licensed under the BSD-2 clause license. There have been a number of major improvements from version 0.14.1. I didn't get to everything I had planned to accomplish (who does?) as I set an aggressive schedule to complete the compiler by December 31, 2020 and met it. (I have found if you don't set a schedule and stick to it, development goes on forever, or until the resources run out.) The most important things I planned to do did get accomplished. Here are some of the new features:
