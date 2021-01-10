@@ -37,7 +37,7 @@
 program XDPW;  // (Input,Output,xprogram,m);
 
 uses SysUtils, Common, Conditional, CompilerTrace, Scanner,
-     Parser, CodeGen, Linker, Listing, Error;
+     Parser, CodeGen, Linker, Listing, Error, compileroptions;
 //
 // $NOTE Noteworks are capable*)
 { $Warning theWarning works}

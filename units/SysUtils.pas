@@ -61,6 +61,31 @@ type
     HighDateTime: integer;
    end;
 
+  // system architecture
+const
+
+    PROCESSOR_ARCHITECTURE_AMD64  = 9;          // x64 (AMD or Intel)
+    PROCESSOR_ARCHITECTURE_ARM    = 5;          // ARM
+    PROCESSOR_ARCHITECTURE_ARM64  = 12;         // ARM64
+    PROCESSOR_ARCHITECTURE_IA64   = 6;          // Intel Itanium-based
+    PROCESSOR_ARCHITECTURE_INTEL  = 0;          // x86
+    PROCESSOR_ARCHITECTURE_UNKNOWN=0xffff;      // unknown
+
+type
+  SystemInfoP = ^SystemInfo;
+    SystemInfo = RECORD
+     wProcessorArchitecture:  WORD;
+     wReserved:  WORD;
+     dwPageSize: Integer;
+    lpMinimumApplicationAddress,            // lowest accessible address
+    lpMaximumApplicationAddress: Pointer;   // highest '          '
+    dwActiveProcessorMask,                  // Processors from 0 to 31
+    dwNumberOfProcessors,
+    dwProcessorType,                        // OBSOLETE; Use Architecture, Level and Revision in this record
+    dwAllocationGranularity: Integer;       // To what are allocations rounded down to the nearest
+    wProcessorLevel,                        // Level of processor
+    wProcessorRevision: Word;               // Revision of processor
+ END;
 
 function IntToStr(n: Integer): string;
 function StrToInt(const s: string): Integer;
@@ -74,6 +99,10 @@ function RTrim(const S: string):string;
 function LTrim(const S: string):string;
 
 procedure GetLocalTime(var SystemTime: TSYSTEMTIME) stdcall; external 'kernel32.dll'; // name 'GetLocalTime';
+procedure GetSystemInfo(  lpSystemInfo: SystemInfoP)  stdcall; external 'kernel32.dll';
+
+
+
 //function FindFirstFileExA(lpfilename : LPCStr;fInfoLevelId:FINDEX_INFO_LEVELS ;lpFindFileData:pointer;
 //         fSearchOp : FINDEX_SEARCH_OPS;lpSearchFilter:pointer;dwAdditionalFlags:dword):Handle; stdcall;
 //         external 'kernel32' // name 'FindFirstFileExA';

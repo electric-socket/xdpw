@@ -93,8 +93,8 @@ const
 
   type
   TPEHeader = packed record
-    PE: array [0..3] of TCharacter;
-    Machine: Word;
+    PE: array [0..3] of TCharacter;     // "PE"
+    Machine: Word;                      // $014C for 386
     NumberOfSections: Word;
     TimeDateStamp: LongInt;
     PointerToSymbolTable: LongInt;
@@ -258,7 +258,7 @@ with Headers do
 
   with PEOptionalHeader do
     begin 
-    Magic                         := $10B;                                                // PE32
+    Magic                         := $10B;   // Normal executable; $29B for PE32+                                             // PE32
     MajorLinkerVersion            := 3; 
     SizeOfCode                    := CodeSize;
     SizeOfInitializedData         := InitializedDataSize;
@@ -273,7 +273,7 @@ with Headers do
     MajorSubsystemVersion         := 4;
     SizeOfImage                   := Align(SizeOf(Headers), SECTALIGN) + Align(CodeSize, SECTALIGN) + Align(InitializedDataSize, SECTALIGN) + Align(UninitializedDataSize, SECTALIGN) + Align(ImportSize, SECTALIGN);
     SizeOfHeaders                 := Align(SizeOf(Headers), FILEALIGN);
-    Subsystem                     := 2 + Ord(IsConsoleProgram);                                // Win32 GUI/console
+    Subsystem                     := 2 + Ord(IsConsoleProgram);    // 2 for GUI, 3 for console                            // Win32 GUI/console
     SizeOfStackReserve            := $1000000;
     SizeOfStackCommit             := $100000;
     SizeOfHeapReserve             := $1000000;

@@ -900,10 +900,12 @@ var
 begin
 FileRecPtr := PFileRec(@F);
 Success := ReadFile(FileRecPtr^.FileHandle, @Buf, Len, LenRead, NonOverlapped);
+{
 if lenread=0 then
    begin
    writeln('BR lenread=0 succ=',success);
    end;
+}
 if 1<> success then
   begin
       WinIOError := GetLastError;

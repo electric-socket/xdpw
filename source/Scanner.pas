@@ -640,8 +640,9 @@ var
                 TraceCompiler := [BecomesCTrace, SymbolCTrace,  UnitCTrace,
                           TokenCTrace,   KeywordCTrace,    LoopCTrace,
                           CallCTrace,    ProcCTrace,       FuncCTrace,
-                          IdentCTrace,   BlockCTrace,      CodeCTrace,
-                          CodeGenCTrace, StatisticsCTrace, ActivityCTrace]
+                          FlagCTrace,    IdentCTrace,      BlockCTrace,
+                          CodeCTrace,    CodeGenCTrace,    StatisticsCTrace,
+                          ActivityCTrace]
               else // Hide all
                   TraceCompiler := []
            else if (Item = 'ASSIGN') or (Item = 'BECOMES') then
@@ -669,12 +670,16 @@ var
                     TraceCompiler := TraceCompiler + [CodeGenCTrace]
                  else
                     TraceCompiler := TraceCompiler - [CodeGenCTrace]
-           else if Item = 'FUNC' then
+           else if Item = 'FLAG' then
+              if Show then
+                  TraceCompiler := TraceCompiler + [FlagCTrace]
+              else
+                  TraceCompiler := TraceCompiler - [FlagCTrace]
+          else if Item = 'FUNC' then
               if Show then
                   TraceCompiler := TraceCompiler + [FuncCTrace]
               else
                   TraceCompiler := TraceCompiler - [FuncCTrace]
-
             else if Item = 'IDENT' then
                 if Show then
                    TraceCompiler := TraceCompiler + [IdentCTrace]
@@ -2072,10 +2077,14 @@ end;
 
 
 procedure AssertIdent;
+var S: String[10];
+
 begin
-with ScannerState do
-  if Token.Kind <> IDENTTOK then
-     Fatal('Identifier expected but ' + GetTokSpelling(Token.Kind) + ' found');
+    S :='';
+    If (FlagCtrace in TraceCompiler) and (ErrorFlag>0 ) then S:='['+Radix(ErrorFlag,10)+'] ';
+    with ScannerState do
+        if Token.Kind <> IDENTTOK then
+            Fatal(S+'Identifier expected but ' + GetTokSpelling(Token.Kind) + ' found');
 end;
 
 

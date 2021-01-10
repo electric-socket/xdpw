@@ -45,15 +45,15 @@ CONST
      ERR_60	= 60 ;
 {    ERR_61	= 61 ; }
 {    ERR_69	= 69 ; }
-     ERR_70	= 70 ;  //  ; inadvertently used before ELSE
+     ERR_SemiElse       = 70 ;  //  ; inadvertently used before ELSE
      ERR_71	= 71 ;  // Runaway conditional code block
      ERR_72     = 72 ;  // Feature not yet working (non-fatal version of 399)
      ERR_73	= 73 ;  // $DEBUG must be enabled at start of PROGRAM or UNIT
 {     ERR_IllegalType0	= 100 ; }
-      ERR_IllegalType1	= 101 ;  // identifier previously declared
+      ERR_IDentPrevDecl	= 101 ;  // identifier previously declared
 {     ERR_IllegalType2	= 102 ; }
 {     ERR_IllegalType3	= 103 ; }
-      ERR_IllegalType4	= 104 ;   // Identifier not declared
+      ERR_IdentNotDecl	= 104 ;   // Identifier not declared
 {     ERR_IllegalType5	= 105 ; }
 {    ERR_121	= 121 ; }
      ERR_122	= 122 ;   // Format specifiers only allowed for untyped or text files
@@ -66,7 +66,7 @@ CONST
 {    ERR_200	= 200 ; }
      ERR_RealConst	      = 201 ; // error in real constant
      ERR_StringExceedsLine    = 202 ; // String exceeds line
-      ERR_StringTooLong                  = 203 ; // String is too long
+      ERR_StringTooLong       = 203 ; // String is too long
      ERR_IntTooBig	= 204 ; // Integer constant exceeds range
       ERR_BadBaseChar	= 210 ; // Invalid char "X" in base N
       ERR_BadBase	= 211 ; // Base must be 2..36
@@ -125,6 +125,7 @@ VAR
      ErrStack: ErrStackP ; // = NIL;    // anything except NIL **ERROR  ** ERROR
      ErrorCount: Integer  =0;      // number of errors detected in source files
      ErrorMax: Integer = 2;        // maximum number of (non-fatal) errors tolerated
+     ErrorFlag: Integer = 0;       // flagging where error detected
      ErrorPrint: Boolean = FALSE;  // haave any errors been printed
      ErrorWarned: Boolean = FALSE; // Were they given the longer warning?
      Errors: Array [1..ErrorMsgMax] of TString = ( MissingErrorMessage,

@@ -77,7 +77,7 @@ begin  // Declare identifier
 if (i > 0) and (Ident[i].UnitIndex = ParserState.UnitStatus.Index) and
    (Ident[i].Block = BlockStack[BlockStackTop].Index) then
       // allow a duplicate identifier, with error
-    Err3( ERR_IllegalType1,IdentName,Radix(Ident[i].DeclaredLine,10),Radix(Ident[i].DeclaredPos,10));;
+    Err3( ERR_IDentPrevDecl,IdentName,Radix(Ident[i].DeclaredLine,10),Radix(Ident[i].DeclaredPos,10));;
 
 
 Inc(NumIdent);   // current top of table
@@ -1040,7 +1040,10 @@ case func of
 
   SIZEOFFUNC:
     begin
+
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1024;
     AssertIdent;
+
     IdentIndex := GetIdentUnsafe(Tok.Name);
     if (IdentIndex <> 0) and (Ident[IdentIndex].Kind = USERTYPE) then   // Type name
       begin
@@ -1050,8 +1053,8 @@ case func of
     else                                                                // Variable name
       begin
           if IdentIndex = 0 then
-               Err1( ERR_IllegalType4,Tok.Name); // identifier not declared
-           Err( ERR_IllegalType); // Type name expected
+               Err1( ERR_IdentNotDecl,Tok.Name); // identifier not declared
+          Err( ERR_IllegalType); // Type name expected
       end;
     ConstValType := INTEGERTYPEINDEX;
     end;
@@ -1095,7 +1098,10 @@ case func of
 
   LOWFUNC, HIGHFUNC:
     begin
+
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1023;
     AssertIdent;
+
     IdentIndex := GetIdentUnsafe(Tok.Name);
     if (IdentIndex <> 0) and (Ident[IdentIndex].Kind = USERTYPE) then   // Type name
       begin
@@ -1743,7 +1749,8 @@ case proc of
     IsFirstParam := TRUE;
 
     if Tok.Kind = OPARTOK then
-    begin
+      begin
+      NextTok;
       repeat
         // 1st argument - file handle
         if FileVarType <> ANYTYPEINDEX then
@@ -2094,7 +2101,10 @@ case func of
 
   SIZEOFFUNC:                 // SizeOf(
     begin
+
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1022;
     AssertIdent;
+
     IdentIndex := GetIdentUnsafe(Tok.Name);
     if (IdentIndex <> 0) and (Ident[IdentIndex].Kind = USERTYPE) then   // Type name
       begin
@@ -2146,7 +2156,10 @@ case func of
 
   LOWFUNC, HIGHFUNC:                   // Lo(, High(
     begin
+
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1021;
     AssertIdent;
+
     IdentIndex := GetIdentUnsafe(Tok.Name);
     if (IdentIndex <> 0) and (Ident[IdentIndex].Kind = USERTYPE) then   // Type name
       begin
@@ -2230,8 +2243,11 @@ case Tok.Kind of
   FILETOK:
     DataType := FILETYPEINDEX
 else
+  begin
+   If FlagCtrace in TraceCompiler then ErrorFlag := 1020;
   AssertIdent;
-  
+  end;
+
   if AllowForwardReference then
     IdentIndex := GetIdentUnsafe(Tok.Name, AllowForwardReference)
   else
@@ -2296,7 +2312,9 @@ if Tok.Kind = OPARTOK then    // procedure or function template as in Type x = P
       NextTok;
       end;
 
+     If FlagCtrace in TraceCompiler then ErrorFlag := 1019;
     repeat
+
       AssertIdent;
 
       Inc(NumIdentInList);
@@ -2931,7 +2949,10 @@ var
   
 begin
         If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileFieldOrMethodInsideWith');
-AssertIdent; 
+
+If FlagCtrace in TraceCompiler then ErrorFlag := 1018;
+AssertIdent;
+
 FieldIndex := GetFieldInsideWith(TempStorageAddr, RecType, IsConst, Tok.Name);
   
 if FieldIndex <> 0 then
@@ -3138,6 +3159,8 @@ while Tok.Kind in [DEREFERENCETOK, OBRACKETTOK, PERIODTOK, OPARTOK] do
     PERIODTOK:                                        // Method or record field access
       begin
       NextTok;
+
+     If FlagCtrace in TraceCompiler then ErrorFlag := 1017;
       AssertIdent;
       
       // First search for a method
@@ -3201,7 +3224,9 @@ begin
 // Returns TRUE if constitutes a statement, i.e., ends with a function call
 Result := FALSE;
 IsConst := FALSE;
-   
+
+If FlagCtrace in TraceCompiler then ErrorFlag := 1016;
+
 AssertIdent;
 
 // First search among records in WITH blocks
@@ -4197,8 +4222,10 @@ procedure CompileStatement(LoopNesting: Integer);
   PatchState :=PatchFor;
   LastKeyTok := Tok;           // save FOR
   NextTok;
-  
+
+ If FlagCtrace in TraceCompiler then ErrorFlag := 1015;
   AssertIdent;
+
   CounterIndex := GetIdent(Tok.Name);
 
   if  (Ident[CounterIndex].Kind <> VARIABLE) or
@@ -4277,7 +4304,8 @@ procedure CompileStatement(LoopNesting: Integer);
   begin
             If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileGotoStatement');
   NextTok;
-  
+
+  If FlagCtrace in TraceCompiler then ErrorFlag := 1014;
   AssertIdent;  // CHANGEME - to allow numbers for GOTO labels
   LabelIndex := GetIdent(Tok.Name);
   
@@ -4485,7 +4513,7 @@ case Tok.Kind of
            // Our first attempt at error recovery; extra ; before else
            If itIs(ELSETOK) then  // erroneous ; before ELSE
            begin
-                 Err(Err_70);       // fault the compile
+                 Err(ERR_SemiElse);       // fault the compile
                  CompileElseStatement(LoopNesting);
            end ;
         end;	
@@ -4542,9 +4570,12 @@ procedure CompileType(var DataType: Integer);
   // Compile enumeration constants
   ConstIndex := 0;
   NextTok;
-  
+
+  If FlagCtrace in TraceCompiler then ErrorFlag := 1013;
   repeat
+
     AssertIdent;
+
     DeclareIdent(Tok.Name, CONSTANT, 0, FALSE, DataType,
                 EMPTYPASSING, ConstIndex, 0.0, '', [],
                 EMPTYPROC, '', 0,Tok.DeclaredLine,Tok.DeclaredPos );
@@ -4692,7 +4723,8 @@ procedure CompileType(var DataType: Integer);
     while not (Tok.Kind in [CASETOK, ENDTOK, CPARTOK]) do     // (exclude) CASE in RECORD
       begin
       NumFieldsInList := 0;
-      
+
+      If FlagCtrace in TraceCompiler then ErrorFlag := 1012;
       repeat
         AssertIdent;
 
@@ -4750,6 +4782,7 @@ procedure CompileType(var DataType: Integer);
       NextTok;
       
       // Tag field
+      If FlagCtrace in TraceCompiler then ErrorFlag := 1011;
       AssertIdent;
       TagTypeIdentIndex := GetIdentUnsafe(Tok.Name);
 
@@ -5187,9 +5220,11 @@ procedure CompileBlock(BlockIdentIndex: Integer);
   else if Types[ConstType].Kind = RECORDTYPE then
     begin
     EatTok(OPARTOK);
-    
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1010;
     repeat
+
       AssertIdent;
+
       FieldIndex := GetField(ConstType, Tok.Name);
       
       NextTok;
@@ -5238,7 +5273,9 @@ procedure CompileBlock(BlockIdentIndex: Integer);
   procedure CompileLabelDeclarations;   // LABEL statement
   begin
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileLabelDeclarations');
+      If FlagCtrace in TraceCompiler then ErrorFlag := 1009;
   repeat
+
     AssertIdent;  // CHANGEME - Allow numbers for GOTO labels
     
     DeclareIdent(Tok.Name, GOTOLABEL, 0, FALSE, 0,
@@ -5295,7 +5332,9 @@ procedure CompileBlock(BlockIdentIndex: Integer);
    
   begin // CompileConstDeclarations
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileConstDeclarations');
+          If FlagCtrace in TraceCompiler then ErrorFlag := 1008;
   repeat
+
     AssertIdent;
 
     NameTok := Tok;
@@ -5319,7 +5358,9 @@ procedure CompileBlock(BlockIdentIndex: Integer);
     VarType: Integer;
   begin
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileTypeDeclarations');
+      If FlagCtrace in TraceCompiler then ErrorFlag := 1007;
   repeat
+
     AssertIdent;
 
     NameTok := Tok;
@@ -5352,7 +5393,9 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileVarDeclarations');
   repeat
     NumIdentInList := 0;
+    If FlagCtrace in TraceCompiler then ErrorFlag := 1006;
     repeat
+
       AssertIdent;
 
       Inc(NumIdentInList);
@@ -5537,7 +5580,10 @@ procedure CompileBlock(BlockIdentIndex: Integer);
     
   begin // CompileProcFuncDeclarations
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileProcFuncDeclarations');
+      If (FlagCtrace in TraceCompiler) then ErrorFlag := 1005;
+
   AssertIdent;
+
   Parserstate.ProcFuncName := Tok.Name;      // current proc or func name
   ProcPos  := Tok.DeclaredPos;
   ProcLine := Tok.DeclaredLine;
@@ -5560,7 +5606,10 @@ procedure CompileBlock(BlockIdentIndex: Integer);
   if Tok.Kind = FORTOK then  // FOR in METHOD
     begin
     NextTok;
+    If (FlagCtrace in TraceCompiler) then ErrorFlag := 1004;
+
     AssertIdent;
+
     ReceiverName := Tok.Name;
 
     NextTok;
@@ -6090,7 +6139,9 @@ begin
 
   NextTok;
 
+  If (FlagCtrace in TraceCompiler) then ErrorFlag := 1003;
   repeat
+
      AssertIdent;
   
       UnitIndex := GetUnitUnsafe(Tok.Name);
@@ -6158,6 +6209,8 @@ begin
         PatchState := PatchUnit;         // probably in a unit
         ParserState.IsUnit := Tok.Kind = UNITTOK;
         NextTok;
+
+        If (FlagCtrace in TraceCompiler) then ErrorFlag := 1002;
         AssertIdent;
 
         Units[ParserState.UnitStatus.Index].Name := Tok.Name;
@@ -6198,11 +6251,13 @@ begin
             begin
                 FileCount := 0;
                 SkipErrors := False;
+                If (FlagCtrace in TraceCompiler) then ErrorFlag := 1001;
                 repeat
                       // Treat each argument in the PROGRAM statement
                       // as a file declaration; if a duplicae of a
                       // predefined file, ignore it
                       NextTok;
+
                       AssertIdent;
                       if (FileCount > 10) and not skipErrors then
                       begin

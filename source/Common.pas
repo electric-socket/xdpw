@@ -34,7 +34,7 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '15';
+       VERSION_REV               = '21';
        CODENAME                  = 'Groundhog Day';
        RELEASEDATE               = 'Tuesday, February 2, 2021';
 
@@ -515,7 +515,8 @@ type
   
   PParams = array [1..MAXPARAMS] of PParam;   
     
-  TIdentKind = (EMPTYIDENT, UNITIDENT, GOTOLABEL, CONSTANT, USERTYPE, VARIABLE, PROC, FUNC);
+  TIdentKind = (EMPTYIDENT, UNITIDENT, GOTOLABEL, CONSTANT,
+                USERTYPE, VARIABLE, PROC, FUNC, UNDEFIDENT);
 
   TScope = (EMPTYSCOPE, GLOBAL, LOCAL);
   
@@ -692,6 +693,7 @@ type
                    CodeCTrace,          // actual code being generated
                    CodeGenCTrace,       // see what is being called for code generation
                    CommentCTrace,       // comment trace
+                   FlagCtrace,          // flag error messages
                    FuncCTrace,          // functions
                    IdentCTrace,         // identifiers
                    IndexCtrace,         // index value on call to start compiling a block
@@ -1360,3 +1362,4 @@ end.
   
       
       3 
+            
