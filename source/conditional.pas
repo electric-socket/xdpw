@@ -85,9 +85,14 @@ VAR
      CIndex: Integer = 0;             // Where we are in CCSTable: UP on IF,
 
      Function SkipConditionally: boolean;
+     Function isDefined(X:String):boolean;
+     function isDeclared(ID:String):Boolean;
      Procedure DumpDefineList;
      Procedure DefineCond(Define, Macro:String; isNumber: Boolean; Amount:Integer );
      Function isMacro(Define: string; Var Macro:String):boolean;
+     function GetDefineValue(Define:String; Var Macro:String;
+                             var isNumeric:Boolean;
+                             var Amount:Integer):Boolean;
 
 
   implementation
@@ -113,6 +118,13 @@ VAR
    // macro defines are used or the last one is deleted, Macrodefined is false
      MacroDefined: Boolean = FALSE;
 
+{
+
+
+
+
+
+     }
 
    // Once created, these are the initial definitions:
    // XDP               Defined for $IFDEF/$IFNDEF test
@@ -124,7 +136,7 @@ VAR
    // since the XDP_ identifiers are pure integers,
    // they do not count as macros
 
- // New ordrr of procedures and functions:
+ // New order of procedures and functions:
  //
  // 1. P/F that provide services to a p/f
  // 2. Processors of the $ options
@@ -168,6 +180,23 @@ VAR
      Writeln;
   end;
 
+  // At the start of a test or macro substitution,
+  // clear the "inUse" flag on each defined item
+
+  Procedure ClearInUseFlag;
+    Var
+     P: DefineP;
+
+  begin
+      P := DefineBase;
+      While P<> Nil do
+      begin
+           P^.inUse := False;
+           P := P^.Next;
+      end;
+  end;
+
+
    // DefineBase always points to the First entry (or to NIL)
 
    // USAGE:
@@ -187,7 +216,7 @@ begin
     M := Trim(Macro);
     Sum := 0;
     // test if the value is numeric or string
-    if not isNumber then { We don't have to check}
+    if not isNumber then { We don't have to check if it already is a number}
     begin
     For I := 1 to Length(M) do
        If M[I] in Digits then
@@ -276,13 +305,11 @@ Var
     NextItem: DefineP;
 begin
     NextItem := DefineBase;
+    MacroDefined := True;
     while Nextitem<>NIL do
     begin
        If not (NextItem^.isNumber or (Nextitem^.value= '')  ) then
-       begin
-           MacroDefined := True;
-           exit;
-       end
+           exit
        else
            NextItem := NextItem^.Next;
     end;
@@ -301,7 +328,9 @@ begin
 end;
 
 // Get the Define key and define value passed to us in TOK
-// from Conditional processor in unit Scanner
+// from Conditional processor in unit Scanner.
+// Note: this extracts the value to store in the define list,
+// this does not retrieve the value from the list
 // USAGE:
 //       $DEFINE, $ELSEIF, $IF, $IFDEF, $IFNDEF, $UNDEF.
 Procedure RetrieveDef(Var Define, Value:String);
@@ -325,12 +354,11 @@ Function GetSkipName(S:  CSkip):String;
 begin
    case S of
        Undefined: Result := 'Undefined';
-       CContinue: Result := 'CContinue';
-           CElse: Result := 'CElse';
-        CEndOnly: Result := 'CEndOnly';
-          CEndIf: Result := 'CEndIf';
+       CContinue: Result := 'Continue';
+           CElse: Result := 'Else';
+        CEndOnly: Result := 'End Only';
+          CEndIf: Result := 'End If';
    end;
-
 end;
 
 
@@ -338,6 +366,7 @@ end;
 // is this in defines list? if so, retrieve value
 // USAGE:
 //      Not used yet; will be used on Macro expansion
+//      or on $IF/$ELSEIF test when implemented
 function GetDefineValue(Define:String; Var Macro:String;
                         var isNumeric:Boolean;
                         var Amount:Integer):Boolean;
@@ -363,9 +392,42 @@ begin
     end;
 end;
 
-Function Defined(X:String):boolean;
+
+// "Cheap version" of GetIdentUnsafe but since
+// we can't access the parser from here I need
+// a simple alternative to query the symbol table
+// and return YES/NO on whether a particular
+// identifier is defined to the program
+// USAGE:
+//        by $IF DECLARED(ident)
+function isDeclared(ID:String):Boolean;
+VAR
+    I: Integer;
+
 begin
-    Result := GetDefineValue(X,TempString,WorkBool,TempInt);
+    Result := true;
+    For I := NumIdent downto 1 do
+        If Ident[I].Name = ID then exit;
+    Result := False;
+end;
+
+
+
+Function isDefined(X:String):boolean;
+VAR
+    NextItem: DefineP;
+
+begin
+    Result := False;
+    NextItem := DefineBase;
+    While NextItem  <> NIL do
+        If NextItem^.Name = X then
+        begin
+            Result := TRUE;
+            exit;
+        end
+        else
+            NextItem := NextItem^.Next;
 End;
 
           Function ParseValue:boolean;  // Analysis of argument
@@ -377,17 +439,7 @@ End;
               TempString: String;
               SY: LSymbol;
 
-          Procedure GetInt;
-          begin
-             WL := Length(WorkString);
-             Tok.OrdValue :=0;
-             tok.Kind:=INTNUMBERTOK;
-             For Scanpoint := Scanpoint to WL do
-             begin
-                 if not(WorkString[Scanpoint] in Digits) then exit;
-                   Tok.OrdValue:=Tok.OrdValue*10+(Ord(WorkString[Scanpoint])-DigitZero);
-             end;
-          end;   // getint
+
 
           // at Workstring[ScanPoint] extract identifier
           Function ExtractIdent :String;
@@ -414,7 +466,7 @@ End;
               Inc(ScanPoint);
               WDefine := ExtractIdent ;
 
-              if Defined(WDefine) then
+              if isDefined(WDefine) then
                  Tok.OrdValue:=1
               else
                  Tok.OrdValue:=0;
@@ -447,65 +499,12 @@ End;
           // smaller procs to do this
           Procedure ParseArg;
           begin
-              SkipSpaces;
-              Case Workstring[ScanPoint] of
-                 '0'..'9':
-                 begin
-                     GetInt;
-                     SkipSpaces;
-                 end;
-                 'A'..'I','J'..'R','S'..'Z',
-                 'a'..'i','j'..'r','s'..'z':
-                 begin
-                       WDefine := ExtractIdent ;
-                       If WDefine='NOT' then
-                         begin
-                           TestDefined;
-                           if Tok.Kind <> BOOLEANTOK then exit; // something wrong
-                           if tok.OrdValue=0 then   // flip value
-                               tok.OrdValue:=1
-                           else
-                               tok.OrdValue:=0;
-                         End  // WDefine = NOT
-                       else if WDefine='DEFINED' THEN
-                         BEGIN
-                           TestDefined2;
-                           if Tok.Kind <> BOOLEANTOK then exit;
-                         END
-                       ELSE   // it is apparently a definition; look it up
-                       begin
-                           if GetDefineValue(Wdefine,Workstring,WorkBool,WorkValue) then
-                           if workBool then // it is a number
-    {5}                      begin
-                                   Tok.Kind:= INTNUMBERTOK;
-                                   TOK.OrdValue:= WorkValue;
-// more later
-                             end;
-                       end;
-                 end;  // letters
-             end; // case
-          end;   // parsearg
 
-          Begin   // parsevalue
-              Result := False;
-              Sum :=0;
-              WorkString := Trim(Tok.NonUppercaseName);
-              WL := Length(WorkString);
-              ParseArg;
-              If not (Workstring[ScanPoint] in ['<','=','>']) then
-              begin
-                  Err( ERR_CondDirective); // Conditional not understood
-                  exit;
-              end;
+// working on this
+           end;
+          begin
 
-              case Workstring[ScanPoint] of      // more later
-                  '<':      ;
-                  '=':      ;
-                 '>':      ;
-              end;
           end;
-
-
 
 Procedure _Define;
 Begin
@@ -551,6 +550,7 @@ Begin
         Err1(Err_803, '$ELSEIF'); // in open code   (warning)
         Exit;
     end;
+    ClearInUseFlag;
     // Right now this is not implemented, so say so
     Err(Err_72); exit;     // "Feature not implemented
 
@@ -591,6 +591,7 @@ Begin
           Err1(Err_805,'$IF'); // Too many $IF statements (Warning)
           Exit;
    end;
+   ClearInUseFlag;
    // Right now this is not implemented, so say so
    Err(Err_72); exit;     // "Feature not implemented
    If not Active then // we don't process the if
@@ -636,7 +637,7 @@ Begin
     begin   //  process the $IFDEF
        Inc(CIndex);
        RetrieveDef(WDefine,TempString);
-       if Defined(WDefine) then        // keep scanning
+       if isDefined(WDefine) then        // keep scanning
            CTable[CIndex].skip := CContinue
        else                           // skip until $ELSE/$ELSEIF/$ENDIF
            CTable[CIndex].skip := CElse;
@@ -663,7 +664,7 @@ Begin
     begin   //  process the $IFNDEF
         Inc(CIndex);
         RetrieveDef(WDefine,TempString);
-        if not Defined(WDefine) then
+        if not isDefined(WDefine) then
             CTable[CIndex].skip := CContinue   // keep scanning
         else
             CTable[CIndex].skip := CElse;      // skip until $ELSE/$ELSEIF/$ENDIF

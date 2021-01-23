@@ -1975,18 +1975,19 @@ end;
 
 
 Procedure GetAssemblerStatement;
-var
-    I:Byte;
 begin
     AssemblerMode := True;
-    For I:= MaxTokens Downto 1 do
-        TokenBuffer[I].Kind := EMPTYTOK;
+    New(TokenBase);
+    TokenTop := TokenBase;
+    TokenTop^.Next := NIl;
     with Scannerstate do
     repeat
         NextTok(TRUE);  // enable pass-thru mode
-        TokenBuffer[I] := Token;
-        inc(I);
-
+        Tokentop^ := Token;
+        New(TokenTop^.Next);
+        TokenTop := TokenTop^.Next;
+        TokenTop^.Next := NIl;
+        TokenTop^.Kind := ENDOFLINETOK;          // placeHolder
     until (Token.Kind=ENDOFLINETOK) or (Token.Kind=ENDTOK) or
           (Token.Kind=COMMENTTOK) or EndOfUnit;
 end;

@@ -11,7 +11,7 @@
       </Flags>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="XDPW"/>
+      <Title Value="XDPW_Main"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>
@@ -28,7 +28,7 @@
     </RunParams>
     <Units Count="37">
       <Unit0>
-        <Filename Value="XDPW.pas"/>
+        <Filename Value="XDPW_Main.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
@@ -190,7 +190,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="XDPW"/>
+      <Filename Value="XDPW_Main"/>
     </Target>
     <SearchPaths>
       <OtherUnitFiles Value="..\units;.."/>

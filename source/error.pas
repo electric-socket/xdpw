@@ -423,6 +423,7 @@ begin
 
 Procedure Err(ErrNum: Integer);
 VAR
+    Ep,
     E: String;
     ErrCount: Integer;
     Fail:Boolean;
@@ -430,6 +431,7 @@ VAR
 Begin
    If Not errorwarned then
      Notice('');
+   Ep :='';
    ErrorWarned := True;
    Fail := False;
    If (ErrNum<800) or (errNum>899) then // 800-899 are warnings
@@ -446,163 +448,163 @@ Begin
 // Now display the error message with appropriate fillers
 // The ones marked by // or above 400 are new or modified
 
-
+   If FlagCtrace in TraceCompiler then  Ep := '['+Radix(ErrorFlag,10)+'] ';
 Case ErrNum of // By the way, there is  nolimit on the number of case selector
 
-  1: NoticePrefix_S('Error 1: Error in Simple Type.');
-  2: NoticePrefix_S('Error 2: Identifier Expected, found "'+Errors[1]+'".');
-  3: NoticePrefix_S('Error 3: ''Program'' or ''Unit'' Expected'); //
-  4: NoticePrefix_S('Error 4: '')'' Expected, found '''+Errors[1]+'''.');       //
-  5: NoticePrefix_S('Error 5: Colon '':'' Expected, found '''+Errors[1]+'''.');   //
-  6: NoticePrefix_S('Error 6: Illegal Symbol ('''+Errors[1]+''', '+Errors[2]+' $'+Errors[3]+').'); //
-  7: NoticePrefix_S('Error 7: Error in Parameter List');
-  8: NoticePrefix_S('Error 8: ''Of'' Expected, found "'+Errors[1]+'" .');
-  9: NoticePrefix_S('Error 9: ''('' Expected, found "'+Errors[1]+'".');
- 10: NoticePrefix_S('Error 10: Error in type');  // Stanfoird version; Original was: Type name expected
- 11: NoticePrefix_S('Error 11: Left square bracket ''['' Expected, found "'+Errors[1]+'".');
- 12: NoticePrefix_S('Error 12: Right square bracket '']'' Expected, found "'+Errors[1]+'".');
- 13: NoticePrefix_S('Error 13: ''End'' Expected, found "'+Errors[1]+'".');
- 14: NoticePrefix_S('Error 14: Semicolon '';'' Expected, found "'+Errors[1]+'".'); // used
- 15: NoticePrefix_S('Error 15: Integer Expected');
- 16: NoticePrefix_S('Error 16: ''-'' Expected, found '+Errors[1]+'''.');
- 17: NoticePrefix_S('Error 17: ''Begin'' Expected, found '+Errors[1]+'''.');
- 18: NoticePrefix_S('Error 18: Error in Declaration Part');
- 19: NoticePrefix_S('Error 19: Error in Field-list');
- 30: NoticePrefix_S('Error 30: Expecting '''+Errors[1]+''', Found '''+Errors[2]+'''.');  //
- 31: NoticePrefix_S('Error 31: Operator '''+Errors[1]+''' Is Not Applicable to '''+Errors[2]+'''.');  //
- 32: NoticePrefix_S('Error 32: Incompatible Number of Parameters in "'+Errors[1]+'", '+Errors[2]+' vs. '+Errors[3]+'.');  // used
- 50: NoticePrefix_S('Error 50: Error in Constant');
- 51: NoticePrefix_S('Error 51: '':='' Expected, found "'+Errors[1]+'".');
- 52: NoticePrefix_S('Error 52: ''Then'' Expected, found "'+Errors[1]+'".');
- 53: NoticePrefix_S('Error 53: ''Until'' Expected, found "'+Errors[1]+'".');
- 54: NoticePrefix_S('Error 54: ''Do'' Expected, found "'+Errors[1]+'".');
- 55: NoticePrefix_S('Error 55: ''To''/''Downto'' Expected, found "'+Errors[1]+'".');
- 58: NoticePrefix_S('Error 58: Error in Factor');
- 59: NoticePrefix_S('Error 59: Error in Variable');
- 60: NoticePrefix_S('Error 60: ''In'' Expected, found '+Errors[1]+'''.');
- 70: NoticePrefix_S('Error 70: Semicolon ";" inadvertently used before ELSE.'); //
- 71: NoticePrefix_S('Error 71: Runaway Conditional Code segment (From '+Errors[1]+':'+Errors[2]+').');
- 72: NoticePrefix_S('Error 72: Feature incomplete, unimplemented or unfinished.'); // non-fatal version of 399
- 73: NoticePrefix_S('Error 73: DEBUG must be enabled at the start of a PROGRAM or UNIT.'); //
-100: NoticePrefix_S('Error 100: '+Errors[1]+' "' +Errors[2]+'", previously declared at '+Errors[3]+':'+Errors[4]+'.'); //
-101: NoticePrefix_S('Error 101: Identifier "' +Errors[1]+'", previously declared at '+Errors[2]+':'+Errors[3]+'.'); // used, was Identifier Declared Twice
-102: NoticePrefix_S('Error 102: Low Bound Exceeds High Bound.');
-103: NoticePrefix_S('Error 103: Identifier '+Errors[1]+' Is Not of Appropriate Class.');
-104: NoticePrefix_S('Error 104: Identifier '+Errors[1]+' Not Declared.');
-105: NoticePrefix_S('Error 105: Sign Not Allowed.');
-106: NoticePrefix_S('Error 106: Number Expected.');
-107: NoticePrefix_S('Error 107: Incompatible Subrange Types.');
-108: NoticePrefix_S('Error 108: File Not Allowed Here.');
-109: NoticePrefix_S('Error 109: Type must Not Be Real.');
-110: NoticePrefix_S('Error 110: Tagfield Type must Be Scalar or Subrange.');
-111: NoticePrefix_S('Error 111: Incompatible with Tagfield Type.');
-112: NoticePrefix_S('Error 112: Index Type must Not Be Real.');
-113: NoticePrefix_S('Error 113: Index Type must Be Scalar or Subrange.');
-114: NoticePrefix_S('Error 114: Base Type must Not Be Real.');
-115: NoticePrefix_S('Error 115: Base Type must Be Scalar or Subrange.');
-116: NoticePrefix_S('Error 116: Error in Type of Standard Procedure Parameter.');
-117: NoticePrefix_S('Error 117: Unsatisfied Forward Reference '+Errors[1]+' (From '+Errors[2]+').');
-118: NoticePrefix_S('Error 118: Unpacking/packing Is of No Use; Check Array Elements.');
+  1: NoticePrefix_S(Ep + 'Error 1: Error in Simple Type.');
+  2: NoticePrefix_S(Ep + 'Error 2: Identifier Expected, found "'+Errors[1]+'".');
+  3: NoticePrefix_S(Ep + 'Error 3: ''Program'' or ''Unit'' Expected'); //
+  4: NoticePrefix_S(Ep + 'Error 4: '')'' Expected, found '''+Errors[1]+'''.');       //
+  5: NoticePrefix_S(Ep + 'Error 5: Colon '':'' Expected, found '''+Errors[1]+'''.');   //
+  6: NoticePrefix_S(Ep + 'Error 6: Illegal Symbol ('''+Errors[1]+''', '+Errors[2]+' $'+Errors[3]+').'); //
+  7: NoticePrefix_S(Ep + 'Error 7: Error in Parameter List');
+  8: NoticePrefix_S(Ep + 'Error 8: ''Of'' Expected, found "'+Errors[1]+'" .');
+  9: NoticePrefix_S(Ep + 'Error 9: ''('' Expected, found "'+Errors[1]+'".');
+ 10: NoticePrefix_S(Ep + 'Error 10: Error in type');  // Stanfoird version; Original was: Type name expected
+ 11: NoticePrefix_S(Ep + 'Error 11: Left square bracket ''['' Expected, found "'+Errors[1]+'".');
+ 12: NoticePrefix_S(Ep + 'Error 12: Right square bracket '']'' Expected, found "'+Errors[1]+'".');
+ 13: NoticePrefix_S(Ep + 'Error 13: ''End'' Expected, found "'+Errors[1]+'".');
+ 14: NoticePrefix_S(Ep + 'Error 14: Semicolon '';'' Expected, found "'+Errors[1]+'".'); // used
+ 15: NoticePrefix_S(Ep + 'Error 15: Integer Expected');
+ 16: NoticePrefix_S(Ep + 'Error 16: ''-'' Expected, found '+Errors[1]+'''.');
+ 17: NoticePrefix_S(Ep + 'Error 17: ''Begin'' Expected, found '+Errors[1]+'''.');
+ 18: NoticePrefix_S(Ep + 'Error 18: Error in Declaration Part');
+ 19: NoticePrefix_S(Ep + 'Error 19: Error in Field-list');
+ 30: NoticePrefix_S(Ep + 'Error 30: Expecting '''+Errors[1]+''', Found '''+Errors[2]+'''.');  //
+ 31: NoticePrefix_S(Ep + 'Error 31: Operator '''+Errors[1]+''' Is Not Applicable to '''+Errors[2]+'''.');  //
+ 32: NoticePrefix_S(Ep + 'Error 32: Incompatible Number of Parameters in "'+Errors[1]+'", '+Errors[2]+' vs. '+Errors[3]+'.');  // used
+ 50: NoticePrefix_S(Ep + 'Error 50: Error in Constant');
+ 51: NoticePrefix_S(Ep + 'Error 51: '':='' Expected, found "'+Errors[1]+'".');
+ 52: NoticePrefix_S(Ep + 'Error 52: ''Then'' Expected, found "'+Errors[1]+'".');
+ 53: NoticePrefix_S(Ep + 'Error 53: ''Until'' Expected, found "'+Errors[1]+'".');
+ 54: NoticePrefix_S(Ep + 'Error 54: ''Do'' Expected, found "'+Errors[1]+'".');
+ 55: NoticePrefix_S(Ep + 'Error 55: ''To''/''Downto'' Expected, found "'+Errors[1]+'".');
+ 58: NoticePrefix_S(Ep + 'Error 58: Error in Factor');
+ 59: NoticePrefix_S(Ep + 'Error 59: Error in Variable');
+ 60: NoticePrefix_S(Ep + 'Error 60: ''In'' Expected, found '+Errors[1]+'''.');
+ 70: NoticePrefix_S(Ep + 'Error 70: Semicolon ";" inadvertently used before ELSE.'); //
+ 71: NoticePrefix_S(Ep + 'Error 71: Runaway Conditional Code segment (From '+Errors[1]+':'+Errors[2]+').');
+ 72: NoticePrefix_S(Ep + 'Error 72: Feature incomplete, unimplemented or unfinished.'); // non-fatal version of 399
+ 73: NoticePrefix_S(Ep + 'Error 73: DEBUG must be enabled at the start of a PROGRAM or UNIT.'); //
+100: NoticePrefix_S(Ep + 'Error 100: '+Errors[1]+' "' +Errors[2]+'", previously declared at '+Errors[3]+':'+Errors[4]+'.'); //
+101: NoticePrefix_S(Ep + 'Error 101: Identifier "' +Errors[1]+'", previously declared at '+Errors[2]+':'+Errors[3]+'.'); // used, was Identifier Declared Twice
+102: NoticePrefix_S(Ep + 'Error 102: Low Bound Exceeds High Bound.');
+103: NoticePrefix_S(Ep + 'Error 103: Identifier '+Errors[1]+' Is Not of Appropriate Class.');
+104: NoticePrefix_S(Ep + 'Error 104: Identifier '+Errors[1]+' Not Declared.');
+105: NoticePrefix_S(Ep + 'Error 105: Sign Not Allowed.');
+106: NoticePrefix_S(Ep + 'Error 106: Number Expected.');
+107: NoticePrefix_S(Ep + 'Error 107: Incompatible Subrange Types.');
+108: NoticePrefix_S(Ep + 'Error 108: File Not Allowed Here.');
+109: NoticePrefix_S(Ep + 'Error 109: Type must Not Be Real.');
+110: NoticePrefix_S(Ep + 'Error 110: Tagfield Type must Be Scalar or Subrange.');
+111: NoticePrefix_S(Ep + 'Error 111: Incompatible with Tagfield Type.');
+112: NoticePrefix_S(Ep + 'Error 112: Index Type must Not Be Real.');
+113: NoticePrefix_S(Ep + 'Error 113: Index Type must Be Scalar or Subrange.');
+114: NoticePrefix_S(Ep + 'Error 114: Base Type must Not Be Real.');
+115: NoticePrefix_S(Ep + 'Error 115: Base Type must Be Scalar or Subrange.');
+116: NoticePrefix_S(Ep + 'Error 116: Error in Type of Standard Procedure Parameter.');
+117: NoticePrefix_S(Ep + 'Error 117: Unsatisfied Forward Reference '+Errors[1]+' (From '+Errors[2]+').');
+118: NoticePrefix_S(Ep + 'Error 118: Unpacking/packing Is of No Use; Check Array Elements.');
 // 119: NoticePrefix('Error 119: Forward Declared: Repetition of Parameter List Not Allowed');// now allowed
-119: NoticePrefix_S('Error 119: .'); {Available}
-120: NoticePrefix_S('Error 120: Function Result Type must Be Scalar, Subrange, String or Pointer.');  //
-121: NoticePrefix_S('Error 121: File Value Parameter Not Allowed.');
+119: NoticePrefix_S(Ep + 'Error 119: .'); {Available}
+120: NoticePrefix_S(Ep + 'Error 120: Function Result Type must Be Scalar, Subrange, String or Pointer.');  //
+121: NoticePrefix_S(Ep + 'Error 121: File Value Parameter Not Allowed.');
 // 122: NoticePrefix('Error 122: Forward Declared Function: Do Not Repeat Result Type'); // This is allowed now
-122: NoticePrefix_S('Error 122: Format specifiers only allowed for untyped or text files.');     {Used}
-123: NoticePrefix_S('Error 123: Missing Result Type in Function Declaration.');
-124: NoticePrefix_S('Error 124: F-format for Real Only.');       {Used}
-125: NoticePrefix_S('Error 125: Error in Type of Standard Function Parameter.');
-126: NoticePrefix_S('Error 126: Number of Parameters Does Not Agree with Declaration.');
-127: NoticePrefix_S('Error 127: Illegal Parameter Substitution.');
-128: NoticePrefix_S('Error 128: Result Type of Parameter Function Doesn''t Agree with Declaration.');
-129: NoticePrefix_S('Error 129: Type Conflict of Operands.');
-130: NoticePrefix_S('Error 130: Expression Is Not of Set Type.');
-131: NoticePrefix_S('Error 131: Tests on Equality Allowed Only.');
-132: NoticePrefix_S('Error 132: Strict Inclusion Not Allowed.');
-133: NoticePrefix_S('Error 133: File Comparison Not Allowed.');
-134: NoticePrefix_S('Error 134: Illegal Type of Operand(s).');
-135: NoticePrefix_S('Error 135: Type of Operand must Be Boolean.');
-136: NoticePrefix_S('Error 136: Set Element Type must Be Scalar or Subrange.');
-137: NoticePrefix_S('Error 137: Set Element Types Not Compatible.');
-138: NoticePrefix_S('Error 138: Type of Variable Is Not Array.');
-139: NoticePrefix_S('Error 139: Index Type Is Not Compatible with Declaration.');
-140: NoticePrefix_S('Error 140: Type of Variable Is Not Record.');
-141: NoticePrefix_S('Error 141: Type of Variable must Be File or Pointer.');
-142: NoticePrefix_S('Error 142: Type Conflict on Parameters.');
-143: NoticePrefix_S('Error 143: Illegal Type of Loop Control Variable.');
-144: NoticePrefix_S('Error 144: Selector Type must Be Scalar or Subrange.');
-145: NoticePrefix_S('Error 145: Type Conflict with Control Variable.');
-146: NoticePrefix_S('Error 146: Assignment of Files Not Allowed.');
-147: NoticePrefix_S('Error 147: Label Type Incompatible with Selecting Expression.');
-148: NoticePrefix_S('Error 148: Subrange Bounds must Be Scalar.');
-149: NoticePrefix_S('Error 149: Index Type must Not Be Integer.');
-150: NoticePrefix_S('Error 150: Assignment to Standard Function Is Not Allowed.');
-151: NoticePrefix_S('Error 151: Assignment to Formal Function Is Not Allowed.');
-152: NoticePrefix_S('Error 152: No Such Field in this Record.');
-153: NoticePrefix_S('Error 153: Type Error in Read.');
-154: NoticePrefix_S('Error 154: Actual Parameter must Be a Variable.');
-155: NoticePrefix_S('Error 155: Control Variable must Not Be Formal.');
-156: NoticePrefix_S('Error 156: Multidefined Case Label.');
-158: NoticePrefix_S('Error 158: Missing Corresponding Variant Declaration.');
-159: NoticePrefix_S('Error 159: Real or String Tagfields Not Allowed.');
-160: NoticePrefix_S('Error 160: Mismatch to Forward Declaration.');
-161: NoticePrefix_S('Error 161: Again Forward Declared.');
-162: NoticePrefix_S('Error 162: External Routines Cannot Be Forward.');
-164: NoticePrefix_S('Error 164: Substitution of Standard Proc/func Not Allowed.');
-165: NoticePrefix_S('Error 165: Multidefined Label.');
-166: NoticePrefix_S('Error 166: Multideclared Label.');
-167: NoticePrefix_S('Error 167: Undeclared Label.');
-168: NoticePrefix_S('Error 168: Undefined Label.');
-169: NoticePrefix_S('Error 169: Error in Base Type.');
-170: NoticePrefix_S('Error 170: Procedure/function Parameter must Have Value Parameters Only.');
-172: NoticePrefix_S('Error 172: Undeclared External File.');
-175: NoticePrefix_S('Error 175: Too Many Files in Program Header.'); // used, was Missing File ''Input'' in Program Heading
-176: NoticePrefix_S('Error 176: .'); // available, was Missing File ''Output'' in Program Heading
-180: NoticePrefix_S('Error 180: .');  // available, was Too Long Source Line
-181: NoticePrefix_S('Error 181: Tagfield Value out of Range.');
-182: NoticePrefix_S('Error 182: Assignment to Subordinate Function Name Not Allowed.');
-184: NoticePrefix_S('Error 184: Too Long File Component.');
-186: NoticePrefix_S('Error 186: Mismatch to Procedure Skeleton.');
-187: NoticePrefix_S('Error 187: Packed Variable Is Not Allowed in Variable Parameter.');
-201: NoticePrefix_S('Error 201: Error in Real Constant: Digit Expected.');
-202: NoticePrefix_S('Error 202: String Constant must Not Exceed Source Line.');
-203: NoticePrefix_S('Error 203: String Constant Too Long.');
-204: NoticePrefix_S('Error 204: Integer Constant Exceeds Range.');
-210: NoticePrefix_S('Error 210: Invalid Base '+Errors[1]+' Digit "'+Errors[2]+'"');  //
-211: NoticePrefix_S('Error 211: Base number must be in range 2..36.');  //
-212: NoticePrefix_S('Error 212: Exponent Expected.');   //
-213: NoticePrefix_S('Error 213: Decimal Numeric Constant Is Too Large.');  //
-214: NoticePrefix_S('Error 214: Hexadecimal Numeric Constant Is Too Large.');  //
-215: NoticePrefix_S('Error 215: Real Number Constant Is Too Large.');  //
-216: NoticePrefix_S('Error 216: &1 Constant Is Too Large.');  //
-219: NoticePrefix_S('Error 219: Only 1 Variable May Be Initialized at a time..');
-220: NoticePrefix_S('Error 220: Variable Initialization Only Allowed in body of unit or Main Program.');  //
-221: NoticePrefix_S('Error 221: Type Conflict in Variable Initialization..');
-222: NoticePrefix_S('Error 222: No. Of Components of Struc. Constant Doesn''t Agree with Declaration.');
-223: NoticePrefix_S('Error 223: Type of Components of Struc. Const. Doesn''t Agree with Declaration.');
-224: NoticePrefix_S('Error 224: Illegal Format in Structured Constant.');
-225: NoticePrefix_S('Error 225: Runaway Comment from '+Errors[1]+' .');  //
-226: NoticePrefix_S('Error 226: Unallowed Type in Structured Constant.');
-227: NoticePrefix_S('Error 227: Record with Variants Not Allowed in Structured Constant.');
-250: NoticePrefix_S('Error 250: Too Many Nested Scopes of Identifiers.');
-251: NoticePrefix_S('Error 251: Too Many Nested Procedures And/or Functions.');
-253: NoticePrefix_S('Error 253: Procedure Too Long.');
-255: NoticePrefix_S('Error 255: Too Many Errors on this Source Line.');
-261: NoticePrefix_S('Error 261: Too Many Procedures or Long Jumps.');
-280: NoticePrefix_S('Error 280: .'); // available, was Event Name Not Declared
-281: NoticePrefix_S('Error 281: .');  // available, was No Postlude Statement Allowed for the Event ''Exit''
-282: NoticePrefix_S('Error 282: .'); // available, was Multidefined Postlude Statement
-291: NoticePrefix_S('Error 291: Extension to ''Standard'' Pascal; Be Warned.');
-292: NoticePrefix_S('Error 292: Cannot Change Type of Constant. Sorry.');
-300: NoticePrefix_S('Error 300: .'); // availabkle, was "Value" Statement Not Allowed for External Compilation');
-301: NoticePrefix_S('Error 301: Conditional expression incorrect.'); // used, new
-302: NoticePrefix_S('Error 302: Index Expression out of Bounds');
-303: NoticePrefix_S('Error 303: Value to Be Assigned Is out of Bounds');
-304: NoticePrefix_S('Error 304: Element Expression out of Range');
-305: NoticePrefix_S('Error 305: "Nil" Is the Only Pointer Initialization Allowed.');    // used
-380: NoticePrefix_S('Error 380: Cannot Pass Procs/functs to Externally Compiled Routines.');
-381: NoticePrefix_S('Error 381: Illegal Result Type for External Function');
-382: NoticePrefix_S('Error 382: Cannot Reset the '+Errors[1]+' Option Once Set.'); //
+122: NoticePrefix_S(Ep + 'Error 122: Format specifiers only allowed for untyped or text files.');     {Used}
+123: NoticePrefix_S(Ep + 'Error 123: Missing Result Type in Function Declaration.');
+124: NoticePrefix_S(Ep + 'Error 124: F-format for Real Only.');       {Used}
+125: NoticePrefix_S(Ep + 'Error 125: Error in Type of Standard Function Parameter.');
+126: NoticePrefix_S(Ep + 'Error 126: Number of Parameters Does Not Agree with Declaration.');
+127: NoticePrefix_S(Ep + 'Error 127: Illegal Parameter Substitution.');
+128: NoticePrefix_S(Ep + 'Error 128: Result Type of Parameter Function Doesn''t Agree with Declaration.');
+129: NoticePrefix_S(Ep + 'Error 129: Type Conflict of Operands.');
+130: NoticePrefix_S(Ep + 'Error 130: Expression Is Not of Set Type.');
+131: NoticePrefix_S(Ep + 'Error 131: Tests on Equality Allowed Only.');
+132: NoticePrefix_S(Ep + 'Error 132: Strict Inclusion Not Allowed.');
+133: NoticePrefix_S(Ep + 'Error 133: File Comparison Not Allowed.');
+134: NoticePrefix_S(Ep + 'Error 134: Illegal Type of Operand(s).');
+135: NoticePrefix_S(Ep + 'Error 135: Type of Operand must Be Boolean.');
+136: NoticePrefix_S(Ep + 'Error 136: Set Element Type must Be Scalar or Subrange.');
+137: NoticePrefix_S(Ep + 'Error 137: Set Element Types Not Compatible.');
+138: NoticePrefix_S(Ep + 'Error 138: Type of Variable Is Not Array.');
+139: NoticePrefix_S(Ep + 'Error 139: Index Type Is Not Compatible with Declaration.');
+140: NoticePrefix_S(Ep + 'Error 140: Type of Variable Is Not Record.');
+141: NoticePrefix_S(Ep + 'Error 141: Type of Variable must Be File or Pointer.');
+142: NoticePrefix_S(Ep + 'Error 142: Type Conflict on Parameters.');
+143: NoticePrefix_S(Ep + 'Error 143: Illegal Type of Loop Control Variable.');
+144: NoticePrefix_S(Ep + 'Error 144: Selector Type must Be Scalar or Subrange.');
+145: NoticePrefix_S(Ep + 'Error 145: Type Conflict with Control Variable.');
+146: NoticePrefix_S(Ep + 'Error 146: Assignment of Files Not Allowed.');
+147: NoticePrefix_S(Ep + 'Error 147: Label Type Incompatible with Selecting Expression.');
+148: NoticePrefix_S(Ep + 'Error 148: Subrange Bounds must Be Scalar.');
+149: NoticePrefix_S(Ep + 'Error 149: Index Type must Not Be Integer.');
+150: NoticePrefix_S(Ep + 'Error 150: Assignment to Standard Function Is Not Allowed.');
+151: NoticePrefix_S(Ep + 'Error 151: Assignment to Formal Function Is Not Allowed.');
+152: NoticePrefix_S(Ep + 'Error 152: No Such Field in this Record.');
+153: NoticePrefix_S(Ep + 'Error 153: Type Error in Read.');
+154: NoticePrefix_S(Ep + 'Error 154: Actual Parameter must Be a Variable.');
+155: NoticePrefix_S(Ep + 'Error 155: Control Variable must Not Be Formal.');
+156: NoticePrefix_S(Ep + 'Error 156: Multidefined Case Label.');
+158: NoticePrefix_S(Ep + 'Error 158: Missing Corresponding Variant Declaration.');
+159: NoticePrefix_S(Ep + 'Error 159: Real or String Tagfields Not Allowed.');
+160: NoticePrefix_S(Ep + 'Error 160: Mismatch to Forward Declaration.');
+161: NoticePrefix_S(Ep + 'Error 161: Again Forward Declared.');
+162: NoticePrefix_S(Ep + 'Error 162: External Routines Cannot Be Forward.');
+164: NoticePrefix_S(Ep + 'Error 164: Substitution of Standard Proc/func Not Allowed.');
+165: NoticePrefix_S(Ep + 'Error 165: Multidefined Label.');
+166: NoticePrefix_S(Ep + 'Error 166: Multideclared Label.');
+167: NoticePrefix_S(Ep + 'Error 167: Undeclared Label.');
+168: NoticePrefix_S(Ep + 'Error 168: Undefined Label.');
+169: NoticePrefix_S(Ep + 'Error 169: Error in Base Type.');
+170: NoticePrefix_S(Ep + 'Error 170: Procedure/function Parameter must Have Value Parameters Only.');
+172: NoticePrefix_S(Ep + 'Error 172: Undeclared External File.');
+175: NoticePrefix_S(Ep + 'Error 175: Too Many Files in Program Header.'); // used, was Missing File ''Input'' in Program Heading
+176: NoticePrefix_S(Ep + 'Error 176: .'); // available, was Missing File ''Output'' in Program Heading
+180: NoticePrefix_S(Ep + 'Error 180: .');  // available, was Too Long Source Line
+181: NoticePrefix_S(Ep + 'Error 181: Tagfield Value out of Range.');
+182: NoticePrefix_S(Ep + 'Error 182: Assignment to Subordinate Function Name Not Allowed.');
+184: NoticePrefix_S(Ep + 'Error 184: Too Long File Component.');
+186: NoticePrefix_S(Ep + 'Error 186: Mismatch to Procedure Skeleton.');
+187: NoticePrefix_S(Ep + 'Error 187: Packed Variable Is Not Allowed in Variable Parameter.');
+201: NoticePrefix_S(Ep + 'Error 201: Error in Real Constant: Digit Expected.');
+202: NoticePrefix_S(Ep + 'Error 202: String Constant must Not Exceed Source Line.');
+203: NoticePrefix_S(Ep + 'Error 203: String Constant Too Long.');
+204: NoticePrefix_S(Ep + 'Error 204: Integer Constant Exceeds Range.');
+210: NoticePrefix_S(Ep + 'Error 210: Invalid Base '+Errors[1]+' Digit "'+Errors[2]+'"');  //
+211: NoticePrefix_S(Ep + 'Error 211: Base number must be in range 2..36.');  //
+212: NoticePrefix_S(Ep + 'Error 212: Exponent Expected.');   //
+213: NoticePrefix_S(Ep + 'Error 213: Decimal Numeric Constant Is Too Large.');  //
+214: NoticePrefix_S(Ep + 'Error 214: Hexadecimal Numeric Constant Is Too Large.');  //
+215: NoticePrefix_S(Ep + 'Error 215: Real Number Constant Is Too Large.');  //
+216: NoticePrefix_S(Ep + 'Error 216: &1 Constant Is Too Large.');  //
+219: NoticePrefix_S(Ep + 'Error 219: Only 1 Variable May Be Initialized at a time..');
+220: NoticePrefix_S(Ep + 'Error 220: Variable Initialization Only Allowed in body of unit or Main Program.');  //
+221: NoticePrefix_S(Ep + 'Error 221: Type Conflict in Variable Initialization..');
+222: NoticePrefix_S(Ep + 'Error 222: No. Of Components of Struc. Constant Doesn''t Agree with Declaration.');
+223: NoticePrefix_S(Ep + 'Error 223: Type of Components of Struc. Const. Doesn''t Agree with Declaration.');
+224: NoticePrefix_S(Ep + 'Error 224: Illegal Format in Structured Constant.');
+225: NoticePrefix_S(Ep + 'Error 225: Runaway Comment from '+Errors[1]+' .');  //
+226: NoticePrefix_S(Ep + 'Error 226: Unallowed Type in Structured Constant.');
+227: NoticePrefix_S(Ep + 'Error 227: Record with Variants Not Allowed in Structured Constant.');
+250: NoticePrefix_S(Ep + 'Error 250: Too Many Nested Scopes of Identifiers.');
+251: NoticePrefix_S(Ep + 'Error 251: Too Many Nested Procedures And/or Functions.');
+253: NoticePrefix_S(Ep + 'Error 253: Procedure Too Long.');
+255: NoticePrefix_S(Ep + 'Error 255: Too Many Errors on this Source Line.');
+261: NoticePrefix_S(Ep + 'Error 261: Too Many Procedures or Long Jumps.');
+280: NoticePrefix_S(Ep + 'Error 280: .'); // available, was Event Name Not Declared
+281: NoticePrefix_S(Ep + 'Error 281: .');  // available, was No Postlude Statement Allowed for the Event ''Exit''
+282: NoticePrefix_S(Ep + 'Error 282: .'); // available, was Multidefined Postlude Statement
+291: NoticePrefix_S(Ep + 'Error 291: Extension to ''Standard'' Pascal; Be Warned.');
+292: NoticePrefix_S(Ep + 'Error 292: Cannot Change Type of Constant. Sorry.');
+300: NoticePrefix_S(Ep + 'Error 300: .'); // availabkle, was "Value" Statement Not Allowed for External Compilation');
+301: NoticePrefix_S(Ep + 'Error 301: Conditional expression incorrect at: "'+Errors[1]+'".'); // used, new
+302: NoticePrefix_S(Ep + 'Error 302: Index Expression out of Bounds');
+303: NoticePrefix_S(Ep + 'Error 303: Value to Be Assigned Is out of Bounds');
+304: NoticePrefix_S(Ep + 'Error 304: Element Expression out of Range');
+305: NoticePrefix_S(Ep + 'Error 305: "Nil" Is the Only Pointer Initialization Allowed.');    // used
+380: NoticePrefix_S(Ep + 'Error 380: Cannot Pass Procs/functs to Externally Compiled Routines.');
+381: NoticePrefix_S(Ep + 'Error 381: Illegal Result Type for External Function');
+382: NoticePrefix_S(Ep + 'Error 382: Cannot Reset the '+Errors[1]+' Option Once Set.'); //
 
 // Warnings: 800-899
 800: NoticePrefix_H('Warning 800: Variable "' +Errors[1]+ '", declared at ' +
@@ -627,39 +629,39 @@ Case ErrNum of // By the way, there is  nolimit on the number of case selector
 899: NoticePrefix_H('Warning 899: Nothing happens.');
 
 // Catastrophic errors: 385-415 and 900-999
-385: NoticePrefix_S('Error 385: Compiler error XXXXX'); //
-386: NoticePrefix_S('Error 386: Compiler error XXXXX'); //
-387: NoticePrefix_S('Error 387: Compiler error XXXXX'); //
-388: NoticePrefix_S('Error 388: Compiler error XXXXX'); //
-389: NoticePrefix_S('Error 389: Compiler error XXXXX'); //
-390: NoticePrefix_S('Error 390: Compiler error XXXXX'); //
-391: NoticePrefix_S('Error 391: Compiler error XXXXX'); //
-392: NoticePrefix_S('Error 392: Compiler error XXXXX'); //
-393: NoticePrefix_S('Error 393: Compiler error XXXXX'); //
-394: NoticePrefix_S('Error 394: Compiler error XXXXX'); //
-395: NoticePrefix_S('Error 395: Compiler error XXXXX'); //
-396: NoticePrefix_S('Error 396: Compiler error XXXXX'); //
-397: NoticePrefix_S('Error 397: Compiler error XXXXX'); //
-398: NoticePrefix_S('Error 398: Cannot nest $INCLUDE files'); //
-399: NoticePrefix_S('Error 399: Not Implemented');
-400: NoticePrefix_S('Error 400: Compiler Error - unspecified'); //
-401: NoticePrefix_S('Error 401: Compiler error XXXXX'); //
-403: NoticePrefix_S('Error 402: Compiler error XXXXX'); //
-403: NoticePrefix_S('Error 403: Compiler error XXXXX'); //
+385: NoticePrefix_S(Ep + 'Error 385: Compiler error XXXXX'); //
+386: NoticePrefix_S(Ep + 'Error 386: Compiler error XXXXX'); //
+387: NoticePrefix_S(Ep + 'Error 387: Compiler error XXXXX'); //
+388: NoticePrefix_S(Ep + 'Error 388: Compiler error XXXXX'); //
+389: NoticePrefix_S(Ep + 'Error 389: Compiler error XXXXX'); //
+390: NoticePrefix_S(Ep + 'Error 390: Compiler error XXXXX'); //
+391: NoticePrefix_S(Ep + 'Error 391: Compiler error XXXXX'); //
+392: NoticePrefix_S(Ep + 'Error 392: Compiler error XXXXX'); //
+393: NoticePrefix_S(Ep + 'Error 393: Compiler error XXXXX'); //
+394: NoticePrefix_S(Ep + 'Error 394: Compiler error XXXXX'); //
+395: NoticePrefix_S(Ep + 'Error 395: Compiler error XXXXX'); //
+396: NoticePrefix_S(Ep + 'Error 396: Compiler error XXXXX'); //
+397: NoticePrefix_S(Ep + 'Error 397: Compiler error XXXXX'); //
+398: NoticePrefix_S(Ep + 'Error 398: Cannot nest $INCLUDE files'); //
+399: NoticePrefix_S(Ep + 'Error 399: Not Implemented');
+400: NoticePrefix_S(Ep + 'Error 400: Compiler Error - unspecified'); //
+401: NoticePrefix_S(Ep + 'Error 401: Compiler error XXXXX'); //
+403: NoticePrefix_S(Ep + 'Error 402: Compiler error XXXXX'); //
+403: NoticePrefix_S(Ep + 'Error 403: Compiler error XXXXX'); //
 // Not by accident s the "missing error message" error #404
-404: NoticePrefix_S('Error 404: Fatal Compiler error: Invalid error message #' +
+404: NoticePrefix_S(Ep + 'Error 404: Fatal Compiler error: Invalid error message #' +
        Errors[1]); //
-405: NoticePrefix_S('Error 395: Compiler error XXXXX'); //
-406: NoticePrefix_S('Error 406: Compiler error XXXXX'); //
-407: NoticePrefix_S('Error 407: Compiler error XXXXX'); //
-408: NoticePrefix_S('Error 408: Compiler error XXXXX'); //
-409: NoticePrefix_S('Error 409: Compiler error XXXXX'); //
-410: NoticePrefix_S('Error 410: Compiler error XXXXX'); //
-411: NoticePrefix_S('Error 411: Compiler error XXXXX'); //
-412: NoticePrefix_S('Error 412: Compiler error XXXXX'); //
-413: NoticePrefix_S('Error 413: Compiler error XXXXX'); //
-414: NoticePrefix_S('Error 414: Compiler error XXXXX'); //
-415: NoticePrefix_S('Error 415: Compiler error XXXXX'); //
+405: NoticePrefix_S(Ep + 'Error 395: Compiler error XXXXX'); //
+406: NoticePrefix_S(Ep + 'Error 406: Compiler error XXXXX'); //
+407: NoticePrefix_S(Ep + 'Error 407: Compiler error XXXXX'); //
+408: NoticePrefix_S(Ep + 'Error 408: Compiler error XXXXX'); //
+409: NoticePrefix_S(Ep + 'Error 409: Compiler error XXXXX'); //
+410: NoticePrefix_S(Ep + 'Error 410: Compiler error XXXXX'); //
+411: NoticePrefix_S(Ep + 'Error 411: Compiler error XXXXX'); //
+412: NoticePrefix_S(Ep + 'Error 412: Compiler error XXXXX'); //
+413: NoticePrefix_S(Ep + 'Error 413: Compiler error XXXXX'); //
+414: NoticePrefix_S(Ep + 'Error 414: Compiler error XXXXX'); //
+415: NoticePrefix_S(Ep + 'Error 415: Compiler error XXXXX'); //
 999: Begin  // Error so bad the number isn't shown
          Notice('');
          E:='Catastrophic Error ';

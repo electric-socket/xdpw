@@ -34,7 +34,7 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '28';
+       VERSION_REV               = '29';
        CODENAME                  = 'Groundhog Day';
        RELEASEDATE               = 'Tuesday, February 2, 2021';
 
@@ -265,6 +265,7 @@ type
         CCSUNDEFTOK,     // $UNDEF
 
         JUNKTOK,         // anything not recognized
+        EOLTOK,          // end of line
         EOFTOK,          // end of file during buffered read
         NULLTOK,         // need to reload token buffer
 
@@ -449,8 +450,9 @@ type
                 ARRAYTYPE,      RECORDTYPE,     INTERFACETYPE,  SETTYPE,
                 PROCEDURALTYPE, METHODTYPE,     ENUMERATEDTYPE, SUBRANGETYPE,
                 FORWARDTYPE);
-
+    TTokenP = ^TToken;
     TToken = record
+       Prev,Next: TTokenP;
        Name: TString;     // For easy analysis, this is always in upper case
        DeclaredPos,            // Where it was declared
        DeclaredLine:Integer;
@@ -741,11 +743,12 @@ var
 // Scanner
 
        AsmResult: TAsmResult;
-       LastKeyTok,               // the last keyword token of executable condition: IF, REPEAT, PROCEDURE, BEFGIN, etc.
+       LastKeyTok,               // the last keyword token of executable condition: IF, REPEAT, PROCEDURE, BEGIN, etc.
                                  // directive being an identifier, an executable keyword
                                  // IF, GOTO, assignment, call, REPEAT, FOR . BEGIN, UNTIL, etc.
        Tok: TToken;
-       TokenBuffer: Array[1..MaxTokens] of TToken; // used by the assembler
+       TokenBase,
+       TokenTop: TTokenP;     // used by the assembler
        KeyWordCount: Array[1..NUMKEYWORDS] of Integer;
 
 
@@ -1039,6 +1042,7 @@ case TokKind of
   REALNUMBERTOK:                     Result := 'real number';
   CHARLITERALTOK:                    Result := 'character literal';
   STRINGLITERALTOK:                  Result := 'string literal';
+  BOOLEANTOK:                        Result := 'boolean value';
   ASMLABELTOK:                       Result := 'assembler label';
 
   // pure errors
@@ -1363,3 +1367,4 @@ end.
       
       3 
                           
+  

@@ -1,7 +1,7 @@
 #  XDPascal for Windows Version 0.16
 For some reason these changes I made to the file do not appear here even though
 it was properly COMMITted and I even manually uploaded it. I'm still seeing the old
-0.15 release file. I'm not sure what's wrong.
+0.15 release file. I'm not sure what's wrong. But I'll keep trying.
 
 This is the documentation for the release of version 0.16 of the XDPascal
 compiler (February 2, 2021, code name "Groundhog Day")

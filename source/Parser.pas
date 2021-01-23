@@ -1013,7 +1013,7 @@ end;
 // this throws an error
 function GetIdent(const IdentName: TString; AllowForwardReference: Boolean = FALSE; RecType: Integer = 0): Integer;
 begin
-If  (ActivityCTrace in TraceCompiler) then EmitHint('f GetIdent');
+If  (ActivityCTrace in TraceCompiler) then EmitHint('f GetIdent = "'+IdentName+'"');
 Result := GetIdentUnsafe(IdentName, AllowForwardReference, RecType);
 if Result = 0 then
 	begin
@@ -3068,8 +3068,11 @@ if Types[ValType].Kind = POINTERTYPE then
       Result := TRUE;
       NextTok;
       end
-    else if MustDereferenceAnyPointer then 
-      CheckTok(DEREFERENCETOK)
+    else if MustDereferenceAnyPointer then
+      begin
+          If FlagCtrace in TraceCompiler then ErrorFlag := 1101;
+          CheckTok(DEREFERENCETOK)
+      end
     end    
   else if MustDereferenceAnyPointer then
     begin
@@ -4253,7 +4256,10 @@ procedure CompileStatement(LoopNesting: Integer);
   GetCompatibleType(ExpressionType, Ident[CounterIndex].DataType);  
 
   if not (Tok.Kind in [TOTOK, DOWNTOTOK]) then
-    CheckTok(TOTOK);
+  begin
+      If FlagCtrace in TraceCompiler then ErrorFlag := 1102;
+      CheckTok(TOTOK);
+  end;
 
   Down := Tok.Kind = DOWNTOTOK;
   NextTok;

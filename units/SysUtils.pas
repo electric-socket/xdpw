@@ -97,6 +97,8 @@ function PWideCharToStr(p: PWideChar): string;
 function Trim(const S: string):string;
 function RTrim(const S: string):string;
 function LTrim(const S: string):string;
+Function SearchStr(Target,Search:String; Start:integer = 1; Count:Integer=255):Integer;
+Function SearchRev(Target,Search:String; Before:Integer):Integer;
 
 procedure GetLocalTime(var SystemTime: TSYSTEMTIME) stdcall; external 'kernel32.dll'; // name 'GetLocalTime';
 procedure GetSystemInfo(  lpSystemInfo: SystemInfoP)  stdcall; external 'kernel32.dll';
@@ -256,6 +258,62 @@ Begin
            Result := Result+S[I]
 end;
 
+// SearchStr: s Similar to Basic's Instr
+// Target: String to be searched
+// Search: what to search for
+// Start: where in Target to start searching
+// Count: for how many characters
+Function SearchStr(Target,Search:String; Start:integer = 1; Count:Integer=255):Integer;
+Var
+    I,
+    J,
+    LenT,
+    LenS,
+    posT,
+    posS:Integer;
+
+    Miss: boolean;
+
+begin
+    Result := 0;
+    LenT := Length(Target);
+    if Count < LenT then LenT := Count;
+    LenS := Length(Search);
+    If LenT = 0 then exit;      // if first arg='' return 0
+    if LenS = 0 then begin result :=Start; exit; End; // if 2nd='' return start
+    if Start > LenT then Exit; // if start > len of target, return
+    for I := Start to LenT do
+    begin
+        Miss := False;
+        for J := 0 to LenS-1 do
+        begin
+            if Target[i+J]<> Search[J+1] then
+               begin
+                   Miss := true;
+                   break;
+               end;
+        end;
+        if miss then continue;
+        result := I;
+        exit;
+    end;
+    // if we get to the end, it wasn't found and returns zero
+end;
+
+// used to search ac string for the last occurrence
+Function SearchRev(Target,Search:String; Before:Integer):Integer;
+Var
+    P: Integer;
+
+begin
+    Result := 0;
+    P := 0;
+    repeat
+           p := SearchStr(Target, search, p+1);
+           If P>Before then P := 0;
+           if P>0 then Result := P;
+     until P = 0;
+end;
 
 
 end.
