@@ -60,6 +60,7 @@ CONST
 {    ERR_123	= 123 ; }
      ERR_124	= 124 ;   // F-format for Real Only
 {    ERR_125	= 125 ; }
+     ERR_badLabel = 147 ;   // label must be ident or 1-9999
 {    ERR_174	= 174 ; }
      ERR_ManyFilesinProgramHeader	= 175 ;  // too many files in program header
 {    ERR_176	= 176 ; }
@@ -535,7 +536,8 @@ Case ErrNum of // By the way, there is  nolimit on the number of case selector
 144: NoticePrefix_S(Ep + 'Error 144: Selector Type must Be Scalar or Subrange.');
 145: NoticePrefix_S(Ep + 'Error 145: Type Conflict with Control Variable.');
 146: NoticePrefix_S(Ep + 'Error 146: Assignment of Files Not Allowed.');
-147: NoticePrefix_S(Ep + 'Error 147: Label Type Incompatible with Selecting Expression.');
+//147: NoticePrefix_S(Ep + 'Error 147: Label Type Incompatible with Selecting Expression.');
+147: NoticePrefix_S(Ep + 'Error 147: Label must be identifier or integer in range 1..9999.');
 148: NoticePrefix_S(Ep + 'Error 148: Subrange Bounds must Be Scalar.');
 149: NoticePrefix_S(Ep + 'Error 149: Index Type must Not Be Integer.');
 150: NoticePrefix_S(Ep + 'Error 150: Assignment to Standard Function Is Not Allowed.');

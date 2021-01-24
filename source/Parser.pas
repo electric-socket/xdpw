@@ -3893,7 +3893,11 @@ procedure CompileStatement(LoopNesting: Integer);
     LabelIndex: Integer;
   begin
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileLabel');
-  if Tok.Kind = IDENTTOK then
+
+      // Restore 1..9999 as labels in addition to identifiers
+    if (tok.kind = IDENTTOK) or
+       ((tok.kind=INTNUMBERTOK) and
+        (Tok.OrdValue>=1 ) and (Tok.OrdValue<=9999 )) then
     begin
     LabelIndex := GetIdentUnsafe(Tok.Name);
     
@@ -3909,7 +3913,8 @@ procedure CompileStatement(LoopNesting: Integer);
         
         Ident[LabelIndex].Address := GetCodeSize;        
         Ident[LabelIndex].IsUnresolvedForward := FALSE;
-        Ident[NumIdent].DeclaredLine :=  TOK.DeclaredLine;               // Label
+        // This identifoes line where declared
+        Ident[NumIdent].DeclaredLine :=  TOK.DeclaredLine;
         Ident[LabelIndex].ForLoopNesting := ForLoopNesting;
         
         NextTok;
@@ -4312,7 +4317,19 @@ procedure CompileStatement(LoopNesting: Integer);
   NextTok;
 
   If FlagCtrace in TraceCompiler then ErrorFlag := 1014;
-  AssertIdent;  // CHANGEME - to allow numbers for GOTO labels
+
+  if (tok.kind = IDENTTOK) or
+     ((tok.kind=INTNUMBERTOK) and
+      (Tok.OrdValue>=1 ) and (Tok.OrdValue<=9999 )) then
+      // this IF statement below needs to be in a BEGIN-END block
+      // because the ELSE applies to the IF stmt above
+    begin
+        if ( tok.kind=INTNUMBERTOK ) then
+            Tok.Name := Radix(Tok.OrdValue,10);
+    end
+    else
+          Err(ERR_badLabel );  // label must be ident or int 1..9999
+
   LabelIndex := GetIdent(Tok.Name);
   
   if Ident[LabelIndex].Kind <> GOTOLABEL then
@@ -5281,13 +5298,19 @@ procedure CompileBlock(BlockIdentIndex: Integer);
       If  (ActivityCTrace in TraceCompiler) then EmitHint('P CompileLabelDeclarations');
       If FlagCtrace in TraceCompiler then ErrorFlag := 1009;
   repeat
-
-    AssertIdent;  // CHANGEME - Allow numbers for GOTO labels
-    
-    DeclareIdent(Tok.Name, GOTOLABEL, 0, FALSE, 0,
-                 EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC,
-                 '', 0, Tok.DeclaredLine, Tok.DeclaredPos);
-    
+       // label can be identifier or int of 1..9999
+    if (tok.kind = IDENTTOK) or
+        ((tok.kind=INTNUMBERTOK) and
+         (Tok.OrdValue>=1 ) and (Tok.OrdValue<=9999 )) then
+    begin
+        if ( tok.kind=INTNUMBERTOK ) then
+            Tok.Name := Radix(Tok.OrdValue,10);
+        DeclareIdent(Tok.Name, GOTOLABEL, 0, FALSE, 0,
+                    EMPTYPASSING, 0, 0.0, '', [], EMPTYPROC,
+                    '', 0, Tok.DeclaredLine, Tok.DeclaredPos);
+    end
+    else
+          Err(ERR_badLabel );  // label must be ident or int 1..9999
     NextTok;
     if Tok.Kind <> COMMATOK then Break;
     NextTok;

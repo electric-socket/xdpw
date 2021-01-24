@@ -265,7 +265,6 @@ type
         CCSUNDEFTOK,     // $UNDEF
 
         JUNKTOK,         // anything not recognized
-        EOLTOK,          // end of line
         EOFTOK,          // end of file during buffered read
         NULLTOK,         // need to reload token buffer
 

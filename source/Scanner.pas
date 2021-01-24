@@ -1273,7 +1273,7 @@ with ScannerState do
       Num := 10 * Num + Digit;
       ReadUppercaseChar(ch);
 
-      if (DigitCount = 1) and (Num=0) and (Ch='X') then    // abandon integer and read hex number
+      if (DigitCount >0) and (Num=0) and (Ch='X') then    // abandon integer and read hex number
       begin
           ReadUppercaseChar(ch);    // Consume the X - it marks the spot
           ReadHexadecimalNumber;    // allow 0xNNNN constants
@@ -1513,14 +1513,7 @@ begin
   end;
 end;
 
-// identifier prefixed by & means don't check keywords
- procedure ReadProtectedIdentifier;
- var
-    c:char;
- begin
-    ReadChar(c);  // get the identifier starting after the ampersand.
-    ReadKeywordOrIdentifier(True);
-  end;
+
 
 
  // get one character or a string
@@ -1681,7 +1674,17 @@ with ScannerState do
     'A'..'I', 'J'..'R', 'S'..'Z',
     'a'..'i', 'j'..'r', 's'..'z', '_':        // an identifier or keyword is not a symbol so we don't checktrace
          ReadKeywordOrIdentifier;
-    '&': ReadProtectedIdentifier;
+    '&': begin  // protected identifier or octal constant
+              ReadChar(Ch);
+              if Ch in identifiers then
+                 ReadKeywordOrIdentifier(True)
+              else  // treat as octal constant
+              begin
+                  Token.Kind := INTNUMBERTOK;
+                  Token.OrdValue := 8;        // radix 8
+                  ReadOtherBaseNumber;
+              end;
+         end;
     '''':
         begin ReadCharOrStringLiteral; CheckTrace; end;
     ':':            // : or :=
