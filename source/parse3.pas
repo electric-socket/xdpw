@@ -2,12 +2,7 @@ program parse3;
 
 Uses common, error, conditional;
 
-type
-     StringRec = record
-     Len,
-     Pos: Integer;
-     S: String;
-  end;
+
 
 VAR
     STR:StringRec;

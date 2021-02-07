@@ -78,6 +78,12 @@ TYPE
             True: (Number: Integer);  // or numeric value
      end;
 
+     StringRec = record
+         Len,
+         Pos: Integer;
+         S: String;
+     end;
+
 VAR
      CTable: Array[1..CMax] of  CS; // If you need more than 100 nested IF/ELSE
                                       // conditional blocks, you probably need a
@@ -117,14 +123,6 @@ VAR
    // match, for substitution purposes. This may slow things down, so, if no
    // macro defines are used or the last one is deleted, Macrodefined is false
      MacroDefined: Boolean = FALSE;
-
-{
-
-
-
-
-
-     }
 
    // Once created, these are the initial definitions:
    // XDP               Defined for $IFDEF/$IFNDEF test

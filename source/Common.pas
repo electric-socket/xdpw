@@ -34,7 +34,7 @@ const
 // note, the folowing MUST be a string of digits in quotes
 // as PROGRAM UPD does an auto-upddate on every compile
 // and it has to be passed as string to Notice.
-       VERSION_REV               = '29';
+       VERSION_REV               = '31';
        CODENAME                  = 'Groundhog Day';
        RELEASEDATE               = 'Tuesday, February 2, 2021';
 
@@ -459,6 +459,7 @@ type
            IDENTTOK:         (NonUppercaseName: TShortString);  // This is needed
                                                                 // in the case of EXTERNAL procedures where the name
                                                                 // might have to be in mixed case
+           BOOLEANTOK:       (BoolValue: Boolean);
            INT64NUMBERTOK:   (Int64Value:TInt64);
            INT128NUMBERTOK:  (Int128Value:TInt128);
            CURRENCYTOK:      (CurrencyValue:TCurrency);
@@ -573,87 +574,92 @@ type
     CallConv: TCallConv;
   end;
 
-  IdentP      = ^TIdentifier;// A specific identifier
-  TraceP      = ^TTrace;     // Trace table for debugging
+  IdentP      = ^TIdentifier;//< Pointer to aA specific identifier
+  TraceP      = ^TTrace;     //< Trace table for debugging
 
+  // The Symbol table: This is one entry
   TIdentifier = record
-    Prev,                    // Links for when this is a linked list
-    Next: IdentP;            // instead of an array
-    Kind: TIdentKind;        // CONST, TYPE, PROC, FUNC, etc.
-    Name: TString;
+    Prev,                    //< Links for when this is a linked list instead of an array
+    Next: IdentP;            //< Links for when this is a linked list instead of an array
+    Kind: TIdentKind;        //< CONST, TYPE, PROC, FUNC, etc.
+    Name: TString;           //< Name of identifier
     // The following two items have two uses. (1) For procedural types
     // declared FORWARD (or proc/func signatures in the IMPLEMENTATION
     // section of a unit, the line number where it was declared if
     // they do not define the proc/func. (2) For unused VARs the line
     // number and position on the line where declared.
-    DeclaredLine,            // Line Bumber in file it was declared
-    DeclaredPos,             // Position on that line where declared
-    DataType: Integer;
-    Address: LongInt;
+
+    DeclaredLine,            //< Line Bumber in file it was declared
+    DeclaredPos,             //< Position on that line where declared
+    DataType: Integer;       //< Which type it is
+    Address: LongInt;        //< Location in memory
     ConstVal: TConst;
-    UnitIndex: Integer;
-    Block: Integer;                   // Index of a block in which the identifier is defined
-    isAbsolute: Boolean;              // is the variable declared an absolute address
-                                      // or is the proc/func external
+    UnitIndex: Integer;      //< Unit number it is in
+    Block: Integer;          //< Index of a block in which the identifier is defined
+    isAbsolute: Boolean;     //< is the variable declared an absolute address
+                             //< or is the proc/func external
     NestingLevel: Byte;
-    ReceiverName: TString;            // Receiver variable name for a method
-    ReceiverType: Integer;            // Receiver type for a method
+    ReceiverName: TString;   //< Receiver variable name for a method
+    ReceiverType: Integer;   //< Receiver type for a method
     Scope: TScope;
-    RelocType: TRelocType;
-    PassMethod: TPassMethod;          // Value, CONST or VAR parameter status
-    Signature: TSignature;
-    ResultIdentIndex: Integer;
+    RelocType: TRelocType;      //< local or global
+    PassMethod: TPassMethod;    //< proc or func argument: Value, CONST or VAR parameter status
+    Signature: TSignature;      //< proc or fubc arguments
+    ResultIdentIndex: Integer;  //< symbol table loc of RRRRRRRRESULT vars
     ProcAsBlock: Integer;
-    PredefProc: TPredefProc;
-    IsUsed: Boolean;                 // to warn of unused variables
-    IsUnresolvedForward: Boolean;
+    PredefProc: TPredefProc;          //< if a prefefined proc or func
+    IsUsed: Boolean;                  //< to warn of unused variables
+    IsUnresolvedForward: Boolean;     //< declared forward but not yet defined
     IsExported: Boolean;
-    IsTypedConst: Boolean;
+    IsTypedConst: Boolean;            //< typed constant
     IsInCStack: Boolean;
-    ForLoopNesting: Integer;          // Number of nested FOR loops where the label is defined
+    ForLoopNesting: Integer;          //< Number of nested FOR loops where the label is defined
   end;
 
-  TTrace = record                     // for procedure tracing
-    isFunc: Boolean;                  // procedure or function
-    StartLine,                        // first line no. of proc/func
-    EndLine,                          // last line no.
-    startAddress,                     // start and end addresses
-    EndAddress: Integer;              // of this procedure's code
-    UnitID: Byte;                     // unit number
-    Name: TString;                    // procedure name
+  // for procedure tracing
+  TTrace = record
+    isFunc: Boolean;                  //< procedure or function
+    StartLine,                        //< first line no. of proc/func
+    EndLine,                          //< last line no.
+    startAddress,                     //< start addresses of this procedure's code
+    EndAddress: Integer;              //< end address
+    UnitID: Byte;                     //< unit number
+    Name: TString;                    //< procedure name
   end;
 
+  // a record field
   TField = record
-    Name: TString;
-    DataType: Integer;
-    Offset: Integer;
+    Name: TString;                    //< field name
+    DataType: Integer;                //< datatype
+    Offset: Integer;                  //< offset in record
   end;
 
-  PField = ^TField;
-  TypePtr = ^TType;
+  PField = ^TField;                   //< pointer to a record field
+  TypePtr = ^TType;                   //< pointer to a type entry
 
+  // Type record
   TType = record
-    Prev,                   // links for when this is a linked list
+    // links for when this is a linked list
+    Prev,
     Next: TypePtr;
-    Block: Integer;
-    BaseType: Integer;      // indexes to another type
+    Block: Integer;         //< level relative to declaration, i.e. proc nesting
+    BaseType: Integer;      //< indexes to another type
     AliasType: Integer;
-    
+  // kind of value
   case Kind: TTypeKind of     
-    SUBRANGETYPE:              (Low, High: Integer);
+    SUBRANGETYPE:              (Low, High: Integer);  //< integer subranges
   
-    ARRAYTYPE:                 (IndexType: Integer;
-                                IsOpenArray: Boolean);
-                      
+    ARRAYTYPE:                 (IndexType: Integer;    //< type of what it is an array of
+                                IsOpenArray: Boolean); //< whether arry does not have fixed dimensions
+    // number of fields in a record
     RECORDTYPE, INTERFACETYPE: (NumFields: Integer;
-                                Field: array [1..MAXFIELDS] of PField);
-
-
-    PROCEDURALTYPE:            (Signature: TSignature;
-                                SelfPointerOffset: LongInt);  // For interface method variables as temporary results
-    
-    METHODTYPE:                (MethodIdentIndex: Integer);   // For static methods as temporary results
-  
+                                Field: array [1..MAXFIELDS] of PField); //< list of fields
+    // Procedures and functions
+    PROCEDURALTYPE:            (Signature: TSignature; //< Proc/Func parameters
+                                SelfPointerOffset: LongInt);  //< For interface method variables as temporary results
+    // methods
+    METHODTYPE:                (MethodIdentIndex: Integer);   //< For static methods as temporary results
+    // Forward declaration
     FORWARDTYPE:               (TypeIdentName: TShortString);   
   end;
   
@@ -666,6 +672,7 @@ type
     Name: TString;
   end;
 
+  // used for WITH statement
   TWithDesignator = record
     TempPointer: Integer;
     DataType: Integer;
@@ -673,46 +680,47 @@ type
   end;
 
   // Eventually I will stop using the indirect procedures
-  // but I will save the definitions and examples as they provide
-  // interesting, useful functionality, such as defining different routines to
-  // execute dynamically at run-time. Besides, the replacement must be done
-  // carefully, as the last time i tried it crashed this compiler so badly
-  // I had to back out all changes and use a diff/merge tool to carefully
-  // re-add them individually until I discovered what broke it.
+  // but I will save the definitions and examples as they
+  // provide interesting, useful functionality, such as
+  // defining different routines to execute dynamically at
+  // run-time. Besides, the replacement must be done carefully,
+  // as the last time i tried it crashed this compiler so
+  // badly I had to back out all changes and use a diff/merge
+  // tool to carefully re-add them individually until I
+  // discovered what broke it.
+
+  // indirect procedure
   TWriteProc = procedure (ClassInstance: Pointer; const Msg: TString);
 
-    // Internals - for compiler tracing
+  // makse sure you change SHOW/$HIDE through proc OptionShowHide
+  // in unit Scanner if you aded new options
 
-    // makse sure you change SHOW/$HIDE through
-    // proc OptionShowHide in unit Scanner if
-    // you aded new options
+   // Internals - for compiler tracing
       TraceType = (
-                   ActivityCTrace,        // procedurecs/funcs called by the Parser
-                   BecomesCTrace,       // := assignments
-                   BlockCTrace,         // begin and repeat blocks
-                   CallCTrace,          // proc and function calls
-                   CodeCTrace,          // actual code being generated
-                   CodeGenCTrace,       // see what is being called for code generation
-                   CommentCTrace,       // comment trace
-                   FlagCtrace,          // flag error messages
-                   FuncCTrace,          // functions
-                   IdentCTrace,         // identifiers
-                   IndexCtrace,         // index value on call to start compiling a block
-                   InputCtrace,         // have compile list what it is reading
-                   InputHexCTrace,      // dump input in char and hex
-                   KeywordCTrace,       // all keywords
-                   LoopCTrace,          // Loops: For, Repeat, While
-                   NarrowCTrace,        // show one token per line
-                   ProcCTrace,          // Procedures
-                   StatisticsCTrace,    // compiler statistics
-                   SymbolCTrace,        // symbols
-                   TokenCTrace,         // tokens in general (basically everything)
-                   UnitCTrace          // unit and program
+                   ActivityCTrace,      //< procedurecs/funcs called by the Parser
+                   BecomesCTrace,       //< := assignments
+                   BlockCTrace,         //< begin and repeat blocks
+                   CallCTrace,          //< proc and function calls
+                   CodeCTrace,          //< actual code being generated
+                   CodeGenCTrace,       //< see what is being called for code generation
+                   CommentCTrace,       //< comment trace
+                   FlagCtrace,          //< flag error messages
+                   FuncCTrace,          //< functions
+                   IdentCTrace,         //< identifiers
+                   IndexCtrace,         //< index value on call to start compiling a block
+                   InputCtrace,         //< have compile list what it is reading
+                   InputHexCTrace,      //< dump input in char and hex
+                   KeywordCTrace,       //< all keywords
+                   LoopCTrace,          //< Loops: For, Repeat, While
+                   NarrowCTrace,        //< show one token per line
+                   ProcCTrace,          //> Procedures
+                   StatisticsCTrace,    //< compiler statistics
+                   SymbolCTrace,        //< symbols
+                   TokenCTrace,         //< tokens in general (basically everything)
+                   UnitCTrace           //< unit and program
                    );
 
-
   // parser
-
 
 const    
   // Operator sets  
@@ -742,12 +750,12 @@ var
 // Scanner
 
        AsmResult: TAsmResult;
-       LastKeyTok,               // the last keyword token of executable condition: IF, REPEAT, PROCEDURE, BEGIN, etc.
+       LastKeyTok,               //< the last keyword token of executable condition: IF, REPEAT, PROCEDURE, BEGIN, etc.
                                  // directive being an identifier, an executable keyword
                                  // IF, GOTO, assignment, call, REPEAT, FOR . BEGIN, UNTIL, etc.
        Tok: TToken;
        TokenBase,
-       TokenTop: TTokenP;     // used by the assembler
+       TokenTop: TTokenP;     //< used by the assembler
        KeyWordCount: Array[1..NUMKEYWORDS] of Integer;
 
 
@@ -756,13 +764,13 @@ var
   ShowToken: Boolean = FALSE;
   ShowParse: Boolean = FALSE;
   ShowTokenLine: Boolean = FALSE;
-  TraceCompiler: Set of TraceType = [];  // default to trace nothing;
+  TraceCompiler: Set of TraceType = [];  //< default to trace nothing;
   // for severe analysis needs, set
   // to TOKEN which is (almost) everything
-  LinePrefix: String[10];
+  LinePrefix: String[10];          //< Identifies Line No, on compiler trace
   LineString: String = '';
-  LineBuf: Array[0..255] of byte;  // copy of input ss read in bytes
-  LinebufPtr: Byte=0;              // length of buffer as used
+  LineBuf: Array[0..255] of byte;  //< copy of input ss read in bytes
+  LinebufPtr: Byte=0;              //< length of buffer as used
 
   // scanner
 
@@ -770,39 +778,40 @@ var
 
 
 
-    SysDef,                  // Consider all idents system identifiers
-    SysIdent,                // Allow identifires to have $ in them; this is
+    SysDef,                  //< Consider all idents system identifiers
+    SysIdent,                //< Allow identifires to have $ in them; this is
                              // used to create procedures, functions or variables
                              // that user code can not call (or accidentally override)
-    isLocal,                 // are identifiers in a procedure/function or
+    isLocal,                 //< are identifiers in a procedure/function or
                              // are they global to the unit?
-    isMainProgram: Boolean;  // is this the main program as opposed to a procedure
+    isMainProgram: Boolean;  //< is this the main program as opposed to a procedure
 
     // these indicate block level at start and end of line
     LineBlockChange :Boolean;
-    LineBlockStart,
-    LineBlockEnd: Byte;
+    LineBlockStart,          //< start of block
+    LineBlockEnd: Byte;      //< end of block
 
     // To count statement blocks: Begin, Repeat, Case;
     // Increase on BEGIN, DECREASE on END
     // increase on REPEAT, DECREASE on UNTIL
     // Increase on CASE, DECREASE on END
 
-     BlockCount: Integer =0; // +1 on BEGIn / REPEAT / CASE; -1 on END / UNTIL
-     BeginCount: Integer = 0;     // Starts at 0 each proc/func,
+     BlockCount: Integer =0; //< +1 on BEGIn / REPEAT / CASE; -1 on END / UNTIL
+     BeginCount: Integer = 0;     //< Starts at 0 each proc/func,
                                   // +1 on begin, -1 on END
 
-     FirstStatement: Boolean;     // Is this the first statement on a line?
+     FirstStatement: Boolean;     //< Is this the first statement on a line?
 
-     LastIdentifier: String;      // previous identifier, used in modifier assignment
-     Skipping: Boolean;            // Global Var to indicate in Skipping mode (See Conditional unit)
+     LastIdentifier: String;      //< previous identifier, used in modifier assignment
+     Skipping: Boolean;           //< Global Var to indicate in Skipping mode (See Conditional unit)
 
 
 
   ScannerStack: array [1..SCANNERSTACKSIZE] of TScannerState;
   ScannerStackTop: Integer = 0;
 
-  CodeSize: Integer;             // Moved from CodeGen
+  CodeSize: Integer;             //< Currenr size of program in bytes
+                                 // Moved from CodeGen
 
   // since the array was searched sequentially, it
   // should be relatively easy to move to
@@ -810,62 +819,49 @@ var
 
   // Where a list is established by pointers, -BASE points
   // to the initial start of the list, -TOP points to the latest entry.
-  NewIdent,             // item being searched
-  IdentBase,            // These will point to the base and
-  IdentTop: IdentP;     // the top of the idetifier linked list
+  NewIdent,             //< item being searched
+  IdentBase,            //< point to the base of the idetifier linked list
+  IdentTop: IdentP;     //< top of the idetifier linked list
 
-  SearchType,              // used when searching for types
-  BaseType,             // base
-  TopType: TypePtr;     // and top of type list
+  SearchType,           //< used when searching for types
+  BaseType,             //< base of type list
+  TopType: TypePtr;     //< top of type list
 
 
   // Once we go to pointers insted of arrays, most of these wll either
   // change to a linked list, to a pointer, or disappear entirely
 
-  Ident: array [1..MAXIDENTS] of TIdentifier;
-  Types: array [1..MAXTYPES] of TType;
+  Ident: array [1..MAXIDENTS] of TIdentifier; //< The symbol table
+  Types: array [1..MAXTYPES] of TType;        //< the type table
   InitializedGlobalData: array [0..MAXINITIALIZEDDATASIZE - 1] of Byte;
-  Units: array [1..MAXUNITS] of TUnit;
-  Extensions: array [1..MAXEXTENSIONS] of TString;
-  Folders: array [1..MAXFOLDERS] of TString;
+  Units: array [1..MAXUNITS] of TUnit;        //< List of units
+  Extensions: array [1..MAXEXTENSIONS] of TString;   //< File name extensions
+  Folders: array [1..MAXFOLDERS] of TString;   //< Folders to search for files
 //  Folders: FolderListP;
   BlockStack: array [1..MAXBLOCKNESTING] of TBlock;
   WithStack: array [1..MAXWITHNESTING] of TWithDesignator;
 
-  NumIdent: integer =0;                // index into identifier table; usually points to the last defined identifier
-  MaxIdentCount: integer = 0;          // largest number of identifiers ever used
-  TotalIdent: integer =0;              // number of identifiers used in entire program
-  TotalExtProc: Integer = 0;           // number of External Procedures
-  TotalExtFunc: Integer = 0;           // and functions
-  TotalProcCount: Integer = 0;         // number of Procedures
-  TotalFuncCount: Integer = 0;         // and functions in program
-  UnitLocalIdent,           // identifoers declared at unit level
-  UnitGlobalIdent,          // Identifiers declared in procs/funcs
-  UnitTotalIdent: Integer;  // Number of identifiers this unit
+  NumIdent: integer =0;                //< index into identifier table; usually points to the last defined identifier
+  MaxIdentCount: integer = 0;          //< largest number of identifiers ever used
+  TotalIdent: integer =0;              //< number of identifiers used in entire program
+  TotalExtProc: Integer = 0;           //< number of External Procedures
+  TotalExtFunc: Integer = 0;           //< number of External functions
+  TotalProcCount: Integer = 0;         //< total number of Procedures in program
+  TotalFuncCount: Integer = 0;         //< total number of functions in program
+  UnitLocalIdent,           //< identifoers declared at unit level
+  UnitGlobalIdent,          //< Identifiers declared in procs/funcs
+  UnitTotalIdent: Integer;  //< Number of identifiers this unit
 
+  // number of each of these used
   NumTypes, NumUnits, NumFolders,
   NumBlocks, BlockStackTop, ForLoopNesting,
   WithNesting, InitializedGlobalDataSize,
   UninitializedGlobalDataSize: Integer;
   IsConsoleProgram: Boolean;
 
+  TotalLines: LongInt = 0; //< Total number of lines read/compiled
 
-// FOR PROGRAM LISTING AND COMPILER DEBUGGING
-   ListProgram,
-   Statistics: Boolean;
-   ListingLine,
-   ListingPage: Integer;
-   ListingPageLine,
-   ListingPos,
-   ListingProcLevelOpen,
-   ListingProcLevelClose,
-   ListingBlockLevelOpen,
-   ListingBlockLevelClose: Byte;
-
-
-   TotalLines: LongInt = 0; // Total number of lines read/compiled
-
- //   TestInit:  TestRecord = (Hi:=5; Lo:=6);
+ //   TestInit:  TestRecord = (Hi:5; Lo: 6);
 
 
 procedure InitializeCommon;
@@ -1367,3 +1363,4 @@ end.
       3 
                           
   
+ö   

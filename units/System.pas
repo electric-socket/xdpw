@@ -163,6 +163,18 @@ ERROR_HANDLE_EOF          =    38; // (0x26)   Reached the end of the file.
 //ERROR_CANNOT_MAKE         =    82; //  (0x52)    The directory or file cannot be created.
 
 
+// Messageox consdtants
+MB_ABORTRETRYIGNORE         = 0x00000002;
+MB_CANCELTRYCONTINUE        = 0x00000006;
+MB_HELP                     = 0x00004000;
+MB_OK                       = 0x00000000;
+MB_OKCANCEL                 = 0x00000001;
+MB_RETRYCANCEL              = 0x00000005;
+MB_YESNO                    = 0x00000004;
+
+
+
+
    RadixString: Array[0..36] of char=('0','1','2','3','4','5','6','7','8','9',
                          'A','B','C','D','E','F','G','H','I','J',
                             'K','L','M','N','O','P','Q','R','S','T',
@@ -219,10 +231,10 @@ type
    PCTSTR  = ^String;      // Same as pCwstr: POINTER TO UNICODE C STRING IF AWARE,
    //                        OTHERWISE SAME AS PCStr
    PCWSTR   = ^String;     // Ptr to 16-bit unicode C string
-   PDWORD   = ^INT64;     // Ptr TO dword
-   PDWORDLONG = ^INT64;   // Ptr TO DWORDLONG
-   PDWORD_PTR = ^INT64;   // Ptr to DWORD_PTR
-   PDWORD32   = ^INTEGER;   // Ptr to DWORD32
+   PDWORD   = ^Integer;     // Ptr TO dword
+   PDWORDLONG = ^Integer;   // Ptr TO DWORDLONG
+   PDWORD_PTR = ^Integer;   // Ptr to DWORD_PTR
+   PDWORD32   = ^Integer;   // Ptr to DWORD32
    PDWORD64   = ^INT64;   // Ptr to DWORD64
    SHORT     = WORD;      // Windows SHORT isn't same as shortint
    UINT      = integer;   // unsigned integer
@@ -231,7 +243,7 @@ type
 
   LongInt = Integer;  
   Double = Real;
-  Extended = Real;
+  Extended = Real;        // normally, extended is 80-bit real but we don't support it (yet)
   Text = file;  
   PChar = ^Char;  
 

@@ -1,7 +1,7 @@
 {#DEFINE Z}
 program exer13;
 Const
-{$IFNDEF X}
+{$IFDEF X}
      X = 4;
 {$ELSE}
      X = 2;

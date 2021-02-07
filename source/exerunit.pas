@@ -9,6 +9,10 @@
 unit ExerUnit;
 
 interface
+const
+   H1 = $DeadBeef;
+   &Repeat = $1F;
+   O1 = &177362;
 
 var
   x:integer;
@@ -20,7 +24,12 @@ function InFunc:Boolean;
 
 implementation
 
-
+Procedure Hiddenproc;
+begin
+    repeat
+         exit;
+    until false;
+end;
 
 Procedure InProc;
 begin

@@ -22,7 +22,7 @@ uses Common,
      Error,
      CompilerTrace,
      Conditional,
-     Listing,
+//     Listing,
      Patch,
      Assembler,
      SysUtils;
@@ -195,7 +195,7 @@ begin
     if not peekch then
         if ScannerState.ch = #10 then   // End of line found
         begin
-            EOLListing;
+            // EOLListing;
             ShowTokenLine := False;
             Inc(ScannerState.Line);
             Scannerstate.Position  := 0;
@@ -216,7 +216,7 @@ begin
                 ch := PCharacter(Integer(Ptr) + Pos)^;
                 if not peekch then
                 begin
-                    WriteListing(Ch);
+//                    WriteListing(Ch);
                     Inc(Pos);
                     Inc(ScannerState.Position);
                 end;
@@ -1517,7 +1517,7 @@ end;
 
 
  // get one character or a string
-procedure ReadCharOrStringLiteral;
+procedure ReadOneString;
 var
   Text: TString;
   EndOfLiteral: Boolean;
@@ -1561,7 +1561,12 @@ with ScannerState do
   end;
 end;
 
-
+// eventually this will handle concatenated constants
+// and other things
+procedure ReadCharOrStringLiteral;
+begin
+    ReadOneString;
+end;
 
 
 // NOTE TO FUTUR EDITORS (or myself):
@@ -1611,7 +1616,6 @@ var
 
 // This replaces the original NextTok to
 // allow for conditional compilation
-
 procedure ReturnTok;
 begin
 with ScannerState do

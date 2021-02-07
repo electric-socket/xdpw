@@ -43,7 +43,7 @@ uses SysUtils,
      Parser,
      CodeGen,
      Linker,
-     Listing,
+//     Listing,
      Error,
      Compileroptions;
 
@@ -226,7 +226,7 @@ begin
     sysDef := True;         // these are system defined
     CompileProgramOrUnit('system.pas');
     sysDef := False;
-    InitListing;
+//    InitListing;
     Dirty := FALSE;                    // No Compiler tracing yet
     ErrorWarned :=False;
 
